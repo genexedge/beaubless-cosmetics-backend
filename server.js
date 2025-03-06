@@ -25,9 +25,6 @@ app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
 // routes
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/cart", cartRoutes);
 app.use("/api/v1/order", orderRoutes);

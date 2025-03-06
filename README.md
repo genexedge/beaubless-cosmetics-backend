@@ -1,10 +1,28 @@
 # Beaubless Cosmetics Backend
 
-## Version
-**v0.0.1**
+# Let's create the README.md file with the requested content
 
-## Changelog
-- Created API For Add to card and Checkout
+content = """
 
-## Description
-Briefly describe your project here...
+# Beaubless Cosmetic E-Commerce Store API
+
+This project is an **E-Commerce Store API** built using **Nodejs** 
+
+## Official Plugins
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react) — Uses [Babel](https://babeljs.io/) for Fast Refresh.
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) — Uses [SWC](https://swc.rs/) for Fast Refresh.
+
+## Version History
+
+| Version | Description                                    | Author |
+| ------- | ---------------------------------------------- | ------ |
+| v0.0.3  | Product Category CRUD                          | Rishabh |
+
+## Installation
+
+1. Our API:
+   ```bash
+   https://api.beaubless.com/
+
+   ```

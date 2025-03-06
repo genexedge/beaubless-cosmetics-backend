@@ -7,6 +7,8 @@ import {
   getSingleProductController,
   insertManyProductsController,
   updateProductController,
+  getAllCategoriesController,
+  createCategoryController
 } from "../controllers/productController.js";
 import upload from "../middlewares/upload.js";
 
@@ -22,6 +24,9 @@ router.post(
 );
 
 router.get("/get-all-product", getAllProductController); //get all product route
+
+router.get("/get-all-categories", getAllCategoriesController);
+router.post("/create-category", createCategoryController);
 
 router.get("/get-single-product/:pid", getSingleProductController); //get single product route
 

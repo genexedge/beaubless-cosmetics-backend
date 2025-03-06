@@ -1,5 +1,7 @@
 import Product from "../models/productModel.js"; // Importing the Product model
 import productSchema from "../models/productSchema.js";
+import ProductCategory from "../models/ProductCategory.js";
+import ProductReview from "../models/ProductReview.js";
 
 // Route to create a new product with image upload
 export const createProductController = async (req, res) => {
@@ -174,3 +176,122 @@ export const getAllProductTwo = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch products", error });
   }
 };
+
+// Create Product Category
+export const createCategoryController = async (req, res) => {
+  try {
+   
+    const { name, description, parentCategory, image, metaTitle, metaDescription, metaKeywords } = req.body;
+
+    const category = new ProductCategory({
+      name,
+      description,
+      parentCategory,
+      image,
+      metaTitle,
+      metaDescription,
+      metaKeywords,
+    });
+
+    await category.save();
+
+    res.status(201).send({
+      success: true,
+      message: "Category created successfully",
+      category,
+    });
+  } catch (error) {
+    res.status(400).send({
+      log:req.body,
+      success: false,
+      message: "Error creating category",
+      error,
+    });
+  }
+};
+
+// Get All Categories
+export const getAllCategoriesController = async (req, res) => {
+  try {
+    const categories = await ProductCategory.find().populate("parentCategory");
+
+    res.status(200).send({
+      success: true,
+      message: "All Categories",
+      categories,
+    });
+  } catch (error) {
+    res.status(400).send({
+      success: false,
+      message: "Error fetching categories",
+      error,
+    });
+  }
+};
+
+// Get Single Category
+export const getCategoryController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const category = await ProductCategory.findById(id).populate("parentCategory");
+
+    if (!category) {
+      return res.status(404).send({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Category fetched successfully",
+      category,
+    });
+  } catch (error) {
+    res.status(400).send({
+      success: false,
+      message: "Error fetching category",
+      error,
+    });
+  }
+};
+
+// Update Category
+export const updateCategoryController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedCategory = await ProductCategory.findByIdAndUpdate(id, req.body, { new: true });
+
+    res.status(200).send({
+      success: true,
+      message: "Category updated successfully",
+      updatedCategory,
+    });
+  } catch (error) {
+    res.status(400).send({
+      success: false,
+      message: "Error updating category",
+      error,
+    });
+  }
+};
+
+// Delete Category
+export const deleteCategoryController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await ProductCategory.findByIdAndDelete(id);
+
+    res.status(200).send({
+      success: true,
+      message: "Category deleted successfully",
+    });
+  } catch (error) {
+    res.status(400).send({
+      success: false,
+      message: "Error deleting category",
+      error,
+    });
+  }
+};
+
