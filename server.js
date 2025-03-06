@@ -7,6 +7,7 @@ import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import wishListRoutes from "./routes/wishListRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
 
 // .env file configuaration
 dotenv.config();
@@ -30,6 +31,7 @@ app.use("/api/v1/cart", cartRoutes);
 app.use("/api/v1/order", orderRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/wishlist", wishListRoutes);
+app.use("/api/v1/", contactRoutes);
 
 app.listen(process.env.PORT, () => {
   console.log(`Server is running on port ${process.env.PORT}`);

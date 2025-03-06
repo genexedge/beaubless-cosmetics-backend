@@ -17,7 +17,10 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 
 | Version | Description                                    | Author |
 | ------- | ---------------------------------------------- | ------ |
+| v0.0.1  | Initial API CRUD                               | ANSHUL  |
+| v0.0.2  | ---                                            | -       |
 | v0.0.3  | Product Category CRUD                          | Rishabh |
+| v0.0.4  | Contact CRUD                                   | Rishabh |
 
 ## Installation
 
