@@ -10,7 +10,7 @@ import {
   getAllCategoriesController,
   createCategoryController
 } from "../controllers/productController.js";
-import upload from "../middlewares/upload.js";
+import upload from "../middlewares/multerConfig.js";
 
 const router = express.Router(); // Creating an instance of Express Router to define routes
 
@@ -19,7 +19,7 @@ const router = express.Router(); // Creating an instance of Express Router to de
 //create product route
 router.post(
   "/create-product",
-  upload.array("image", 2),
+  upload.array("image", 10),
   createProductController
 );
 
@@ -28,11 +28,12 @@ router.get("/get-all-product", getAllProductController); //get all product route
 router.get("/get-all-categories", getAllCategoriesController);
 router.post("/create-category", createCategoryController);
 
+
 router.get("/get-single-product/:pid", getSingleProductController); //get single product route
 
 router.put(
   "/update-product/:pid",
-  upload.array("image", 2),
+  // upload.array("image", 2),
   updateProductController
 ); //get single product route
 

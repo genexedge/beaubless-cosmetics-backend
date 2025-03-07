@@ -8,24 +8,30 @@ import orderRoutes from "./routes/orderRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import wishListRoutes from "./routes/wishListRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import multer from "multer";
+import bodyParser from "body-parser";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// .env file configuaration
+// Environment configuration
 dotenv.config();
 
-//database connection
+// Database connection
 connectDB();
 
-//rest object
+// Rest object
 const app = express();
 
-// middleware
+// Middlewares
 app.use(cors());
 app.use(express.json());
-
-// Serve uploaded images statically
+app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
-// routes
+
+// Routes
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/cart", cartRoutes);
 app.use("/api/v1/order", orderRoutes);
@@ -33,6 +39,13 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/wishlist", wishListRoutes);
 app.use("/api/v1/", contactRoutes);
 
-app.listen(process.env.PORT, () => {
-  console.log(`Server is running on port ${process.env.PORT}`);
+// Root Route
+app.get("/", (req, res) => {
+  res.send("API is running successfully!");
+});
+
+// Start Server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });

@@ -6,37 +6,69 @@ import ProductReview from "../models/ProductReview.js";
 // Route to create a new product with image upload
 export const createProductController = async (req, res) => {
   try {
-    // Destructure required fields from request body
-    const { name, brand, description, category, price, stock } = req.body;
-    // Check if all required fields are provided
+    console.log("Request Body:", req.body);
+
+    const {
+      name,
+      brand,
+      description,
+      shortDescription,
+      category,
+      price,
+      stock,
+      discount,
+      shades,
+      ingredients,
+      ratings,
+      isFeatured,
+    } = req.body;
+
     if (!name || !brand || !description || !category || !price || !stock) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Extract uploaded image filenames and create file paths
-    const images = req.files.map((file) => `/uploads/${file.filename}`);
+    // Only parse JSON if the field is a string
+    const parsedDiscount = typeof discount === "string" ? JSON.parse(discount) : discount;
+    const parsedShades = typeof shades === "string" ? JSON.parse(shades) : shades;
+    const parsedIngredients = typeof ingredients === "string" ? JSON.parse(ingredients) : ingredients;
+    const parsedRatings = typeof ratings === "string" ? JSON.parse(ratings) : ratings;
 
-    // Create a new product with provided data and uploaded images
-    const newProduct = new Product({ ...req.body, images });
+    const newProduct = new Product({
+      name,
+      brand,
+      description,
+      shortDescription,
+      category,
+      price,
+      stock,
+      discount: parsedDiscount,
+      shades: parsedShades,
+      ingredients: parsedIngredients,
+      ratings: parsedRatings,
+      isFeatured: isFeatured === "true" || isFeatured === true ? true : false,
+    });
 
-    // Save the product to the database
     await newProduct.save();
 
-    // Send success response
-    res.status(201).send({
+    res.status(201).json({
       success: true,
       message: "Product Created Successfully",
-      newProduct,
+      product: newProduct,
     });
   } catch (error) {
-    // Handle errors and send failure response
-    res.status(401).send({
+    console.error("Error in Product Creation:", error);
+    res.status(500).json({
       success: false,
-      message: "Error in product Creation",
-      error,
+      message: "Error in Product Creation",
+      error: error.message,
     });
   }
 };
+
+
+
+
+
 
 // Route to get all products
 export const getAllProductController = async (req, res) => {
