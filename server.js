@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import productRoutes from "./routes/productRoutes.js";
+import blogRoutes from "./routes//blogRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -33,6 +34,7 @@ app.use("/uploads", express.static("uploads"));
 
 // Routes
 app.use("/api/v1/products", productRoutes);
+app.use("/api/v1/blog", blogRoutes);
 app.use("/api/v1/cart", cartRoutes);
 app.use("/api/v1/order", orderRoutes);
 app.use("/api/v1/auth", authRoutes);
