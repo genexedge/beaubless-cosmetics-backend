@@ -23,6 +23,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v0.0.4  | Contact CRUD                                   | Rishabh |
 | v0.0.5  | Create Product                                 | Rishabh |
 | v0.0.6  | Uploads Product Image                          | Rishabh |
+| v0.0.7  | order get all API                              | Rishabh |
 
 ## Installation
 

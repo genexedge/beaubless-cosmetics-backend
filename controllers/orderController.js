@@ -2,7 +2,14 @@ import Cart from "../models/cartModel.js";
 import Order from "../models/orderModel.js";
 import axios from "axios";
 import crypto from "crypto";
-
+export const getAllOrder = async (req, res) => {
+  try {
+    const orders = await Order.find(); // Renamed variable to avoid conflict
+    res.status(200).json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch orders", error });
+  }
+};
 //controller for creating order
 //controller for creating order
 export const createOrderController = async (req, res) => {
@@ -163,3 +170,4 @@ export const verifyPaymentController = async (req, res) => {
     });
   }
 };
+
