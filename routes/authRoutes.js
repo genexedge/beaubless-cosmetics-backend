@@ -6,7 +6,7 @@
 // router.post("/register", authRegisterController);
 
 // export default router;
-
+import User from "../models/userModel.js";
 import express from "express";
 import {
   forgotPasswordController,
@@ -36,10 +36,12 @@ router.get("/test", requireSignIn, isAdmin, testController);
 
 //Protected Rout auth
 router.get("/user-auth", requireSignIn, (req, res) => {
-  res.status(200).send({
-    ok: true,
+  res.status(200).json({
+    Status: "success",
+    user: req.user, // Return user data if needed
   });
 });
+
 
 //admin auth route
 router.get("/admin-auth", requireSignIn, isAdmin, (req, res) => {
@@ -50,5 +52,23 @@ router.get("/admin-auth", requireSignIn, isAdmin, (req, res) => {
 
 //update profile
 router.put("/update-profile", updateProfileController);
+router.get("/getAllUser", async (req, res) => {
+  try {
+      const users = await User.find(); // Fetch users
+      res.status(200).json({
+          success: true, 
+          users // Send as 'users' array
+      });
+  } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({
+          success: false, 
+          message: "Failed to fetch users", 
+          error: error.message 
+      });
+  }
+});
+
+
 
 export default router;

@@ -1,10 +1,7 @@
 import mongoose from "mongoose";
 
 const BlogPostSchema = new mongoose.Schema({
-  imgSrc: {
-    type: String,
-    required: true,
-  },
+  image: [{ type: String }],
   alt: {
     type: String,
     default: "",
@@ -14,6 +11,10 @@ const BlogPostSchema = new mongoose.Schema({
     required: true,
   },
   title: {
+    type: String,
+    required: true,
+  },
+  slug: {
     type: String,
     required: true,
   },

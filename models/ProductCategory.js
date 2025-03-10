@@ -5,7 +5,7 @@ const productCategorySchema = new mongoose.Schema(
     name: { type: String, required: true, unique: true },
     description: { type: String },
     parentCategory: { type: mongoose.Schema.Types.ObjectId, ref: "ProductCategory" },
-    image: { type: String },
+    image: [{ type: String }],
     isActive: { type: Boolean, default: true },
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     metaTitle: { type: String },

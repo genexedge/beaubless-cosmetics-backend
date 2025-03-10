@@ -2,11 +2,15 @@ import Product from "../models/productModel.js"; // Importing the Product model
 import productSchema from "../models/productSchema.js";
 import ProductCategory from "../models/ProductCategory.js";
 import ProductReview from "../models/ProductReview.js";
-
+import cloudinary from "../config/cloudinary.js"; // Ensure Cloudinary is configured
+import fs from "fs";
 // Route to create a new product with image upload
 export const createProductController = async (req, res) => {
   try {
     console.log("Request Body:", req.body);
+    console.log("Uploaded Files:", req.files);
+
+    const imageUrls = req.files.map((file) => file.path); // Get Cloudinary URLs
 
     const {
       name,
@@ -17,58 +21,38 @@ export const createProductController = async (req, res) => {
       price,
       stock,
       discount,
-      shades,
       ingredients,
       ratings,
       isFeatured,
     } = req.body;
 
     if (!name || !brand || !description || !category || !price || !stock) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // Only parse JSON if the field is a string
-    const parsedDiscount = typeof discount === "string" ? JSON.parse(discount) : discount;
-    const parsedShades = typeof shades === "string" ? JSON.parse(shades) : shades;
-    const parsedIngredients = typeof ingredients === "string" ? JSON.parse(ingredients) : ingredients;
-    const parsedRatings = typeof ratings === "string" ? JSON.parse(ratings) : ratings;
-
+    // Save product to DB (assuming you're using MongoDB)
     const newProduct = new Product({
       name,
       brand,
-      description,
       shortDescription,
+      description,
       category,
       price,
       stock,
-      discount: parsedDiscount,
-      shades: parsedShades,
-      ingredients: parsedIngredients,
-      ratings: parsedRatings,
-      isFeatured: isFeatured === "true" || isFeatured === true ? true : false,
+      discount: discount ? { percentage: discount } : null,
+      ingredients: ingredients ? ingredients.split(",") : [],
+      ratings: ratings ? { average: ratings, reviews: 0 } : { average: 0, reviews: 0 },
+      isFeatured: isFeatured === "true",
+      images: imageUrls, // Store Cloudinary URLs
     });
 
     await newProduct.save();
-
-    res.status(201).json({
-      success: true,
-      message: "Product Created Successfully",
-      product: newProduct,
-    });
+    res.status(201).json({ success: true, message: "Product created successfully!", product: newProduct });
   } catch (error) {
-    console.error("Error in Product Creation:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error in Product Creation",
-      error: error.message,
-    });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
-
-
-
-
-
 
 // Route to get all products
 export const getAllProductController = async (req, res) => {
@@ -154,6 +138,8 @@ export const updateProductController = async (req, res) => {
 };
 
 // Route to delete a product
+
+
 export const deleteProductController = async (req, res) => {
   try {
     const { pid } = req.params; // Get product ID from URL
@@ -161,18 +147,22 @@ export const deleteProductController = async (req, res) => {
     // Check if the product exists
     const product = await Product.findById(pid);
     if (!product) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Product not found" });
+      return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    // Delete associated images from the uploads folder
-    product.images.forEach((imagePath) => {
-      const fullPath = `.${imagePath}`; // Convert relative path to absolute
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath); // Delete file
+    // Delete associated images from Cloudinary
+    for (const imageUrl of product.images) {
+      try {
+        // Extract public ID from Cloudinary URL (assuming standard structure)
+        const publicId = imageUrl.split("/").pop().split(".")[0]; // Extract file name without extension
+
+        // Delete from Cloudinary
+        await cloudinary.uploader.destroy(`beaubless/${publicId}`); // Folder name added
+        console.log(`Deleted from Cloudinary: ${publicId}`);
+      } catch (cloudinaryError) {
+        console.error("Cloudinary Deletion Error:", cloudinaryError);
       }
-    });
+    }
 
     // Delete the product from the database
     await Product.findByIdAndDelete(pid);
@@ -182,6 +172,7 @@ export const deleteProductController = async (req, res) => {
       message: "Product deleted successfully",
     });
   } catch (error) {
+    console.error("Error deleting product:", error);
     res.status(500).json({
       success: false,
       message: "Error deleting product",
@@ -189,6 +180,7 @@ export const deleteProductController = async (req, res) => {
     });
   }
 };
+
 
 // Route to insert many products
 export const insertManyProductsController = async (req, res) => {
@@ -212,14 +204,16 @@ export const getAllProductTwo = async (req, res) => {
 // Create Product Category
 export const createCategoryController = async (req, res) => {
   try {
-   
+    console.log("Request Body:", req.body);
+    console.log("Uploaded Files:", req.files);
+    const imageUrls = req.files.map((file) => file.path); // Get Cloudinary URLs
     const { name, description, parentCategory, image, metaTitle, metaDescription, metaKeywords } = req.body;
 
     const category = new ProductCategory({
       name,
       description,
       parentCategory,
-      image,
+      image: imageUrls, // Store Cloudinary URLs,
       metaTitle,
       metaDescription,
       metaKeywords,
@@ -311,18 +305,44 @@ export const updateCategoryController = async (req, res) => {
 // Delete Category
 export const deleteCategoryController = async (req, res) => {
   try {
-    const { id } = req.params;
-    await ProductCategory.findByIdAndDelete(id);
+    const { pid } = req.params;
+console.log(pid);
+
+    // Find category first
+    const category = await ProductCategory.findById(pid);
+    if (!category) {
+      return res.status(404).send({
+        success: false,
+        message: "Category not found",
+      });
+    }
+
+    // Delete image from Cloudinary
+    for (const imageUrl of category.image) {
+      try {
+        // Extract public ID from Cloudinary URL (assuming standard structure)
+        const publicId = imageUrl.split("/").pop().split(".")[0]; // Extract file name without extension
+
+        // Delete from Cloudinary
+        await cloudinary.uploader.destroy(`beaubless/${publicId}`); // Folder name added
+        console.log(`Deleted from Cloudinary: ${publicId}`);
+      } catch (cloudinaryError) {
+        console.error("Cloudinary Deletion Error:", cloudinaryError);
+      }
+    }
+
+    // Delete category from database
+    await ProductCategory.findByIdAndDelete(pid);
 
     res.status(200).send({
       success: true,
-      message: "Category deleted successfully",
+      message: "Category and associated image deleted successfully",
     });
   } catch (error) {
-    res.status(400).send({
+    res.status(500).send({
       success: false,
       message: "Error deleting category",
-      error,
+      error: error.message,
     });
   }
 };

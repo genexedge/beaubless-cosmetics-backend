@@ -2,9 +2,9 @@ import express from 'express';
 import { createBlog, getAllBlogs, getBlogById, updateBlog, deleteBlog } from '../controllers/blogController.js';
 
 const router = express.Router();
-
+import upload from "../middlewares/multerConfig.js";
 // Create Blog
-router.post('/create', createBlog);
+router.post('/create',upload.array("image", 10), createBlog);
 
 // Get All Blogs
 router.get('/get-all-blog', getAllBlogs);

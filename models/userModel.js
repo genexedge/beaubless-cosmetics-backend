@@ -45,9 +45,15 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     address: {
-      type: String,
-      required: true,
+      houseNo: { type: String, required: true },  // House Number or Apartment Number
+      street: { type: String, required: true },   // Street Address
+      landmark: { type: String },                 // Optional Landmark
+      city: { type: String, required: true },     // City
+      state: { type: String, required: true },    // State
+      country: { type: String, required: true },  // Country
+      pincode: { type: String, required: true },  // ZIP/Pincode
     },
+    
     answer: {
       type: String,
       required: true,

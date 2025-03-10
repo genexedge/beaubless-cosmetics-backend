@@ -1,46 +1,38 @@
 import express from "express";
 import {
-  createProductController,
-  deleteProductController,
-  getAllProductController,
-  getAllProductTwo,
-  getSingleProductController,
-  insertManyProductsController,
-  updateProductController,
-  getAllCategoriesController,
-  createCategoryController
+    createProductController,
+    deleteProductController,
+    getAllProductController,
+    getAllProductTwo,
+    getSingleProductController,
+    insertManyProductsController,
+    updateProductController,
+    getAllCategoriesController,
+    createCategoryController,deleteCategoryController
+
 } from "../controllers/productController.js";
 import upload from "../middlewares/multerConfig.js";
 
 const router = express.Router(); // Creating an instance of Express Router to define routes
 
-//routes
-
-//create product route
-router.post(
-  "/create-product",
-  upload.array("image", 10),
-  createProductController
-);
-
+//routes create product route
+router.post("/create-product", upload.array("image", 10), createProductController);
 router.get("/get-all-product", getAllProductController); //get all product route
 
 router.get("/get-all-categories", getAllCategoriesController);
-router.post("/create-category", createCategoryController);
-
+router.post("/create-category", upload.array("image", 10), createCategoryController);
 
 router.get("/get-single-product/:pid", getSingleProductController); //get single product route
 
-router.put(
-  "/update-product/:pid",
-  // upload.array("image", 2),
-  updateProductController
-); //get single product route
+router.put("/update-product/:pid",
+// upload.array("image", 2),
+updateProductController); //get single product route
 
 router.delete("/delete-product/:pid", deleteProductController); //delete product route
 
 //many products
 router.post("/many-products", insertManyProductsController);
 router.get("/get-products", getAllProductTwo);
+router.delete("/delete-category/:pid", deleteCategoryController);
 
 export default router;
