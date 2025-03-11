@@ -25,6 +25,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v0.0.6  | Uploads Product Image                          | Rishabh |
 | v0.0.7  | order get all API                              | Rishabh |
 | v0.0.8  | updated Product,blog,category,user Add,deleted API  | Rishabh |
+| v0.0.9  | order API                                      | Rishabh |
 
 ## Installation
 

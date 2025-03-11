@@ -37,65 +37,98 @@
 import { comparePassword, hashPassword } from "../helpers/authHelper.js";
 import User from "../models/userModel.js";
 import JWT from "jsonwebtoken";
+import nodemailer from "nodemailer";
+import crypto from "crypto";
+
+const transporter = nodemailer.createTransport({
+  host: "smtppro.zoho.in", // Zoho's SMTP server
+  port: 465, // SSL Port
+  secure: true, // SSL encryption
+  auth: {
+    user: process.env.EMAIL_USER, // Your Zoho email (e.g., example@yourdomain.com)
+    pass: process.env.EMAIL_PASS, // Your Zoho email password or app password
+  },
+});
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log("SMTP Connection Error:", error);
+  } else {
+    console.log("SMTP Connected Successfully!");
+  }
+});
+
 
 export const registerController = async (req, res) => {
   try {
-    const { name, email, password, phone, address, answer } = req.body;
-    //validation
-    if (!name) {
-      return res.send({ message: "Name is required" });
-    }
-    if (!email) {
-      return res.send({ message: "Email is required" });
-    }
-    if (!password) {
-      return res.send({ message: "password is required" });
-    }
-    if (!phone) {
-      return res.send({ message: "phone is required" });
-    }
-    if (!address) {
-      return res.send({ message: "address is required" });
-    }
-    if (!answer) {
-      return res.send({ message: "answer is required" });
-    }
-    //existing user
+    const { name, email, password, phone, address, role, answer } = req.body;
 
+    // Validation
+    if (!name) return res.status(400).send({ message: "Name is required" });
+    if (!email) return res.status(400).send({ message: "Email is required" });
+    if (!password) return res.status(400).send({ message: "Password is required" });
+    if (!phone) return res.status(400).send({ message: "Phone is required" });
+    if (!answer) return res.status(400).send({ message: "Security answer is required" });
+
+    if (!address || typeof address !== "object") {
+      return res.status(400).send({ message: "Valid address is required" });
+    }
+
+    const { houseNo, street, city, state, country, pincode } = address;
+    if (!houseNo) return res.status(400).send({ message: "House No is required" });
+    if (!street) return res.status(400).send({ message: "Street is required" });
+    if (!city) return res.status(400).send({ message: "City is required" });
+    if (!state) return res.status(400).send({ message: "State is required" });
+    if (!country) return res.status(400).send({ message: "Country is required" });
+    if (!pincode) return res.status(400).send({ message: "Pincode is required" });
+
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(200).send({
+      return res.status(409).send({
         success: false,
-        message: "User already regiter please login",
+        message: "User already registered, please log in",
       });
     }
 
-    //register user
+    // Hash password
     const hashedPassword = await hashPassword(password);
-    //save
-    const user = await new User({
+
+    // Save user
+    const user = new User({
       name,
       email,
       phone,
-      address,
       password: hashedPassword,
+      address: {
+        houseNo,
+        street,
+        city,
+        state,
+        country,
+        pincode,
+      },
+      role: role || 0, // Default to 'User' if not provided
       answer,
-    }).save();
+    });
+
+    await user.save();
 
     res.status(201).send({
       success: true,
-      message: "User Register successfully",
+      message: "User registered successfully",
       user,
     });
+
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send({
       success: false,
-      message: "Error in Registration",
+      message: "Error in registration",
       error,
     });
   }
 };
+
 
 //login
 export const loginController = async (req, res) => {
@@ -162,37 +195,50 @@ export const testController = (req, res) => {
 
 export const forgotPasswordController = async (req, res) => {
   try {
-    const { email, answer, newPassword } = req.body;
+    const { email } = req.body;
+
     if (!email) {
-      res.status(400).send({ message: "Email is required" });
-    }
-    if (!answer) {
-      res.status(400).send({ message: "Answer is required" });
-    }
-    if (!newPassword) {
-      res.status(400).send({ message: "newPassword is required" });
+      return res.status(400).send({ message: "Email is required" });
     }
 
-    //validation
-    const user = await User.findOne({ email, answer });
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).send({
         success: false,
-        message: "Wrong email Or answer",
+        message: "User with this email does not exist",
       });
     }
 
-    const hashNewPassword = await hashPassword(newPassword);
-    await User.findByIdAndUpdate(user._id, { password: hashNewPassword });
+    // Generate Reset Token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // Token valid for 1 hour
+    await user.save();
+
+    // Password Reset Link
+    const resetLink = `https://yourfrontend.com/reset-password/${resetToken}`;
+
+    // Send Email
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Password Reset Request",
+      html: `<p>You requested a password reset. Click the link below to set a new password:</p>
+             <a href="${resetLink}">${resetLink}</a>
+             <p>If you did not request this, please ignore this email.</p>`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
     res.status(200).send({
       success: true,
-      message: "Password Reset Successfully",
+      message: "Password reset link sent to your email.",
     });
   } catch (error) {
-    console.log(error);
+    console.error("Forgot Password Error:", error);
     res.status(500).send({
       success: false,
-      message: "Somthing wend wrong",
+      message: "Something went wrong",
       error,
     });
   }
