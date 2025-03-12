@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
-   {
+  {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -13,10 +13,10 @@ const orderSchema = new mongoose.Schema(
     phone: { type: String, required: true },
 
     address: {
-      country: { type: String, required: false },
-      city: { type: String, required: false },
-      state: { type: String, required: false },
-      street: { type: String, required: false },
+      country: { type: String, required: true },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      street: { type: String, required: true },
       postalCode: { type: String, required: true },
     },
 
@@ -31,7 +31,12 @@ const orderSchema = new mongoose.Schema(
         price: { type: Number, required: true },
         quantity: { type: Number, required: true },
         discount: {
-          percentage: { type: Number, default: 0 },
+          percentage: { 
+            type: Number, 
+            default: 0,
+            min: 0, 
+            max: 100, // Ensure discount doesn't exceed 100%
+          },
           validUntil: { type: Date },
         },
         images: [{ type: String }],
@@ -41,11 +46,24 @@ const orderSchema = new mongoose.Schema(
     totalPrice: { type: Number, required: true },
     note: { type: String, default: "" },
     paymentMethod: { type: String, required: true },
+    
     orderStatus: {
       type: String,
-      enum: ["Pending", "Completed", "Cancelled"],
+      enum: ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"],
       default: "Pending",
     },
+
+    // ✅ Track Order Status History
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"],
+        },
+        updatedAt: { type: Date, default: Date.now }, // Timestamp of status change
+      },
+    ],
+
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "Failed"],
@@ -56,5 +74,13 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// ✅ Automatically add first status in history when creating a new order
+orderSchema.pre("save", function (next) {
+  if (this.isNew) {
+    this.statusHistory.push({ status: this.orderStatus });
+  }
+  next();
+});
 
 export default mongoose.model("Order", orderSchema);

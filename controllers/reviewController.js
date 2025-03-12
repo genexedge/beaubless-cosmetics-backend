@@ -1,132 +1,148 @@
-import ProductReview from "../models/reviewModel.js";
-import Order from "../models/orderModel.js";
+import Product from "../models/productModel.js";  // Assuming Product model includes productReviewSchema
 import mongoose from "mongoose";
+import User from "../models/userModel.js";
+import Order from "../models/orderModel.js";
+// ✅ 1️⃣ Create a new review
 
-// ✅ Submit a Review (Only if user has purchased the product)
-export const submitReview = async (req, res) => {
+export const createReview = async (req, res) => {
   try {
-    const { productId, email, userName, rating, comment, images } = req.body;
+    const { product, uid, email, rating, comment, images } = req.body;
+    
 
-    if (!productId || !email || !rating || !comment || !userName) {
-      return res.status(400).json({ message: "All fields are required." });
+    if (!mongoose.Types.ObjectId.isValid(product)) {
+      return res.status(400).json({ error: "Invalid product ID" });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return res.status(400).json({ message: "Invalid product ID." });
+    // Check if product exists
+    const productData = await Product.findById(product);
+    if (!productData) return res.status(404).json({ error: "Product not found" });
+
+    let userType = "guest";
+    let name = "Anonymous"; // Default name
+
+    // Check if email exists in the User table
+    const user = await User.findOne({ email });
+
+    if (user) {
+      userType = "member";
+      name = user.name || `${user.name}`.trim();
+    } else {
+      // If not found in User table, check if they purchased the product
+      const order = await Order.findOne({ userEmail: email, "items.product": product });
+      if (order) {
+        userType = "member";
+        name = `${order.firstName} ${order.lastName}`.trim();
+      }
     }
 
-    const productObjectId = new mongoose.Types.ObjectId(productId);
-    console.log("Product ID from request:", productId);
-    console.log("Converted Product Object ID:", productObjectId);
-
-    // Check if the user has purchased the product
-    const hasPurchased = await Order.exists({
-      email,
-      "items.productId": productObjectId,
-      status: "Completed", // Ensure this matches your order schema
-    });
-
-    console.log("Has purchased:", hasPurchased);
-
-    if (!hasPurchased) {
-      return res.status(403).json({ message: "You have not purchased this product yet." });
+    if (userType === "guest") {
+      return res.status(403).json({ error: "You cannot post a review for this product as you haven't purchased it." });
     }
 
-    const newReview = new ProductReview({
-      product: productObjectId,
-      user: { name: userName, email },
-      rating,
-      comment,
-      verifiedPurchase: true,
-      images: images || [],
-      helpfulVotes: 0,
-    });
+    // Ensure `userType` and `name` are included in the review object
+    const newReview = { product, uid: uid || "anonymous", email, userType, name, rating, comment, images };
+    console.log(newReview);
+    productData.reviews.push(newReview);
+    await productData.save();
 
-    await newReview.save();
-    res.status(201).json({ message: "Review submitted successfully!", review: newReview });
+    return res.status(201).json({ message: "Review added successfully!", review: newReview });
   } catch (error) {
-    console.error("Error submitting review:", error);
-    res.status(500).json({ message: "Server Error", error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ✅ Get all reviews for a specific product
-export const getProductReviews = async (req, res) => {
+
+
+
+
+// ✅ 2️⃣ Get all reviews for a specific product
+export const getReviewsByProduct = async (req, res) => {
   try {
     const { productId } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return res.status(400).json({ message: "Invalid product ID." });
+      return res.status(400).json({ error: "Invalid product ID" });
     }
 
-    const reviews = await ProductReview.find({ product: productId }).sort({ createdAt: -1 });
+    const productData = await Product.findById(productId).select("reviews");
+    if (!productData) return res.status(404).json({ error: "Product not found" });
 
-    res.status(200).json(reviews);
+    return res.status(200).json({ reviews: productData.reviews });
   } catch (error) {
-    res.status(500).json({ message: "Server Error", error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ✅ Update a review (User can edit their own review)
+// ✅ 3️⃣ Update a review (Only by the user who wrote it)
 export const updateReview = async (req, res) => {
   try {
     const { reviewId } = req.params;
-    const { email, rating, comment, images } = req.body;
+    const { uid, rating, comment, images } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(reviewId)) {
-      return res.status(400).json({ message: "Invalid review ID." });
+    const productData = await Product.findOne({ "reviews._id": reviewId });
+    if (!productData) return res.status(404).json({ error: "Review not found" });
+
+    const review = productData.reviews.id(reviewId);
+
+    if (review.uid !== uid) {
+      return res.status(403).json({ error: "Unauthorized: You can only edit your own review" });
     }
 
-    // Find the review
-    const review = await ProductReview.findById(reviewId);
+    review.rating = rating || review.rating;
+    review.comment = comment || review.comment;
+    review.images = images || review.images;
+    await productData.save();
 
-    if (!review) {
-      return res.status(404).json({ message: "Review not found." });
-    }
-
-    // Check if the email matches the review
-    if (review.user.email !== email) {
-      return res.status(403).json({ message: "You can only update your own review." });
-    }
-
-    // Update fields
-    if (rating) review.rating = rating;
-    if (comment) review.comment = comment;
-    if (images) review.images = images;
-
-    await review.save();
-    res.status(200).json({ message: "Review updated successfully!", review });
+    return res.status(200).json({ message: "Review updated successfully!", review });
   } catch (error) {
-    res.status(500).json({ message: "Server Error", error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
-// ✅ Delete a review (Only admin OR user who wrote the review)
+// ✅ 4️⃣ Delete a review (Only by the user who wrote it)
 export const deleteReview = async (req, res) => {
   try {
     const { reviewId } = req.params;
-    const { email, userId, isAdmin } = req.body; // Assume userId is passed for logged-in users
+    const { uid } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(reviewId)) {
-      return res.status(400).json({ message: "Invalid review ID." });
+    const productData = await Product.findOne({ "reviews._id": reviewId });
+    if (!productData) return res.status(404).json({ error: "Review not found" });
+
+    const review = productData.reviews.id(reviewId);
+
+    if (review.uid !== uid) {
+      return res.status(403).json({ error: "Unauthorized: You can only delete your own review" });
     }
 
-    // Find review
-    const review = await ProductReview.findById(reviewId);
+    review.remove();
+    await productData.save();
 
-    if (!review) {
-      return res.status(404).json({ message: "Review not found." });
-    }
-
-    // Check if the user is allowed to delete
-    if (isAdmin || (userId && review.user.userId && review.user.userId.toString() === userId)) {
-      await ProductReview.findByIdAndDelete(reviewId);
-      return res.status(200).json({ message: "Review deleted successfully!" });
-    } else {
-      return res.status(403).json({ message: "You are not authorized to delete this review." });
-    }
+    return res.status(200).json({ message: "Review deleted successfully!" });
   } catch (error) {
-    res.status(500).json({ message: "Server Error", error: error.message });
+    return res.status(500).json({ error: error.message });
   }
 };
 
+// ✅ 5️⃣ Mark a review as helpful
+export const markReviewHelpful = async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    const { userId } = req.body;
+
+    const productData = await Product.findOne({ "reviews._id": reviewId });
+    if (!productData) return res.status(404).json({ error: "Review not found" });
+
+    const review = productData.reviews.id(reviewId);
+
+    if (!review.helpfulVotes.includes(userId)) {
+      review.helpfulVotes.push(userId);
+    } else {
+      review.helpfulVotes = review.helpfulVotes.filter(id => id.toString() !== userId);
+    }
+
+    await productData.save();
+    return res.status(200).json({ message: "Vote updated!", helpfulVotes: review.helpfulVotes.length });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};

@@ -1,66 +1,10 @@
-// import { hashPassword } from "../helpers/authHelper.js";
-// import User from "../models/userModel.js";
-// export const authRegisterController = async (req, res) => {
-//   try {
-//     const { name, email, password } = req.body;
-
-//     if (!name || !email || !password) {
-//       return res.status(400).json({ message: "All fields are required" });
-//     }
-
-//     //check user already exist
-//     const userExist = await User.findOne({ email });
-//     if (userExist) {
-//       return res.status(400).json({ message: "User already exist" });
-//     }
-
-//     //hash password
-//     const hashedPassword = await hashPassword(password);
-
-//     //create new user
-//     const newUser = await new User({
-//       name,
-//       email,
-//       password: hashedPassword,
-//     }).save();
-
-//     res.status(201).send({
-//       success: true,
-//       message: "User Register successfully",
-//       newUser,
-//     });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
 import { comparePassword, hashPassword } from "../helpers/authHelper.js";
 import User from "../models/userModel.js";
 import JWT from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 
-const transporter = nodemailer.createTransport({
-  host: "smtppro.zoho.in",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
 
-async function verifySMTPConnection() {
-  try {
-    await transporter.verify();
-    console.log("✅ SMTP Connected Successfully!");
-  } catch (error) {
-    console.warn("⚠️ SMTP Warning: Connection issue detected.", error.message);
-  }
-}
-
-// Call the function
-verifySMTPConnection();
 
 export const registerController = async (req, res) => {
   try {
@@ -286,5 +230,131 @@ export const updateProfileController = async (req, res) => {
       message: "Error while update user profile",
       error,
     });
+  }
+};
+
+
+
+// Addresss
+
+export const addAddress = async (req, res) => {
+  try {
+    console.log("Request Body:", req.body);
+
+    // Extract userId and address fields correctly
+    const { userId, houseNo, street, landmark, city, state, country, pincode } = req.body;
+
+    if (!userId || !houseNo || !street || !city || !state || !country || !pincode) {
+      return res.status(400).json({ success: false, message: "All fields are required!" });
+    }
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found!" });
+    }
+
+    // Create new address object
+    const newAddress = {
+      houseNo,
+      street,
+      landmark: landmark || "", // Optional
+      city,
+      state,
+      country,
+      pincode,
+      isDefault: user.addresses.length === 0, // First address is default
+    };
+
+    // Add to user's addresses array
+    user.addresses.push(newAddress);
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Address added successfully",
+      addresses: user.addresses,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ success: false, message: "Error adding address", error });
+  }
+};
+
+
+export const updateAddress = async (req, res) => {
+  try {
+    const { userId, addressId, updatedAddress } = req.body;
+
+    // Ensure all required fields are provided
+    if (!userId || !addressId || !updatedAddress) {
+      return res.status(400).json({ success: false, message: "Missing required fields!" });
+    }
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found!" });
+    }
+
+    // Find the index of the address to update
+    const addressIndex = user.addresses.findIndex(addr => addr._id.toString() === addressId);
+    if (addressIndex === -1) {
+      return res.status(404).json({ success: false, message: "Address not found!" });
+    }
+
+    // Update the address fields dynamically
+    Object.keys(updatedAddress).forEach(key => {
+      user.addresses[addressIndex][key] = updatedAddress[key];
+    });
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Address updated successfully",
+      addresses: user.addresses,  // Return the updated list
+    });
+  } catch (error) {
+    console.error("Update Address Error:", error);
+    res.status(500).json({ success: false, message: "Error updating address", error });
+  }
+};
+
+export const deleteAddress = async (req, res) => {
+  try {
+    const { userId, addressId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found!" });
+    }
+
+    user.addresses = user.addresses.filter(addr => addr._id.toString() !== addressId);
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Address deleted successfully", user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error deleting address", error });
+  }
+};
+export const setDefaultAddress = async (req, res) => {
+  try {
+    const { userId, addressId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found!" });
+    }
+
+    user.addresses = user.addresses.map(addr =>
+      addr._id.toString() === addressId ? { ...addr._doc, isDefault: true } : { ...addr._doc, isDefault: false }
+    );
+
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Default address set successfully", user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error setting default address", error });
   }
 };

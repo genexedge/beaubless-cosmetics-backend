@@ -1,7 +1,7 @@
 import Product from "../models/productModel.js"; // Importing the Product model
 import productSchema from "../models/productSchema.js";
 import ProductCategory from "../models/ProductCategory.js";
-import ProductReview from "../models/ProductReview.js";
+
 import cloudinary from "../config/cloudinary.js"; // Ensure Cloudinary is configured
 import fs from "fs";
 // Route to create a new product with image upload
@@ -10,7 +10,8 @@ export const createProductController = async (req, res) => {
     console.log("Request Body:", req.body);
     console.log("Uploaded Files:", req.files);
 
-    const imageUrls = req.files.map((file) => file.path); // Get Cloudinary URLs
+    // Ensure uploaded images are stored correctly
+    const imageUrls = req.files && req.files.length > 0 ? req.files.map((file) => file.path) : req.body.images || [];
 
     let {
       name,
@@ -20,31 +21,62 @@ export const createProductController = async (req, res) => {
       description,
       category,
       price,
-      stock,
       discount = 0,
+      productType,
+      stock,
+      variants,
       ingredients,
       isFeatured,
       isOnSale,
       isNewArrival,
-      shades,
-      sizes
+      shades
     } = req.body;
 
-    if (!name || !brand || !description || !category || !price || !stock) {
+    // Convert required fields to the correct types
+    discount = Number(discount);
+    price = Number(price);
+
+    // Validate required fields
+    if (!name || !brand || !description || !category || !price || !productType) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // Convert discount to a number if it's sent as a string
-    discount = Number(discount);
+    if (productType === "single") {
+      if (!stock) {
+        return res.status(400).json({ success: false, message: "Stock is required for single products" });
+      }
+    } else if (productType === "variant") {
+      // ✅ Fix JSON Parsing Error
+      if (!variants || (typeof variants === "string" ? JSON.parse(variants).length === 0 : variants.length === 0)) {
+        return res.status(400).json({ success: false, message: "Variants are required for variant products" });
+      }
+      stock = undefined; // No stock field for variant products
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid product type" });
+    }
 
-    // Calculate offerPrice after discount
+    // Calculate offerPrice
     let offerPrice = price;
     if (discount > 0) {
       offerPrice = price - (price * discount) / 100;
     }
 
-    // Calculate finalPrice (assuming no additional tax/shipping for now)
-    let finalPrice = offerPrice; // Modify as needed if tax/shipping applies
+    // Final price after all discounts
+    let finalPrice = offerPrice;
+
+    // ✅ Fix Ingredients Handling
+    let parsedIngredients = [];
+    if (typeof ingredients === "string") {
+      parsedIngredients = ingredients.split(",").map((i) => i.trim());
+    } else if (Array.isArray(ingredients)) {
+      parsedIngredients = ingredients;
+    }
+
+    // ✅ Fix Shades Parsing
+    let parsedShades = typeof shades === "string" ? JSON.parse(shades) : shades;
+
+    // ✅ Fix Variants Parsing
+    let parsedVariants = typeof variants === "string" ? JSON.parse(variants) : variants;
 
     // Create new product instance
     const newProduct = new Product({
@@ -55,27 +87,30 @@ export const createProductController = async (req, res) => {
       description,
       category,
       price,
-      stock,
       discount: { percentage: discount },
       offerPrice,
       finalPrice,
-      
-      ingredients: ingredients ? ingredients.split(",") : [],
-      shades: shades ? JSON.parse(shades) : [],
-      sizes: sizes ? JSON.parse(sizes) : [],
+      productType,
+      stock: productType === "single" ? stock : undefined,
+      variants: productType === "variant" ? parsedVariants : undefined,
+      ingredients: parsedIngredients,
+      shades: parsedShades,
       isFeatured: isFeatured === "true",
       isOnSale: isOnSale === "true",
-      isNewArrival: isFeatured === "true",
-      images: imageUrls, // Store Cloudinary URLs
+      isNewArrival: isNewArrival === "true",
+      images: imageUrls,
     });
 
     await newProduct.save();
     res.status(201).json({ success: true, message: "Product created successfully!", product: newProduct });
   } catch (error) {
-    console.error(error);
+    console.error("Error:", error);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
+
+
 
 
 // Route to get all products
@@ -105,23 +140,39 @@ export const getAllProductController = async (req, res) => {
 export const getSingleProductController = async (req, res) => {
   try {
     const { pid } = req.params;
-    const product = await Product.findOne({ _id: pid });
 
-    // Send success response with fetched products
-    res.status(200).send({
+    // Fetch product with reviews populated
+    const product = await Product.findOne({ _id: pid }).populate("reviews");
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    // Calculate total number of reviews
+    const reviewCount = product.reviews.length;
+
+    // Calculate average rating
+    const totalRating = product.reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
+
+    // Send success response with all necessary details
+    res.status(200).json({
       success: true,
-      message: "Product",
+      message: "Product fetched successfully",
       product,
+      reviewCount,
+      averageRating,
     });
   } catch (error) {
     // Handle errors and send failure response
-    res.status(401).send({
+    res.status(500).json({
       success: false,
-      message: "Error in fetch product",
-      error,
+      message: "Error in fetching product",
+      error: error.message,
     });
   }
 };
+
 
 // Route to update a product
 export const updateProductController = async (req, res) => {
@@ -156,15 +207,28 @@ export const updateProductController = async (req, res) => {
     }
 
     // Handle images: Keep old ones if no new ones are uploaded
-    const imageUrls = req.files.length > 0 ? req.files.map((file) => file.path) : product.images;
+    const imageUrls = req.files?.length > 0 ? req.files.map((file) => file.path) : product.images;
 
-    // Convert discount to a number
-    discount = discount !== undefined ? Number(discount) : product.discount.percentage;
+    // Convert price and stock to valid numbers
+    const newPrice = price !== undefined ? Number(price) : product.price;
+    const newStock = stock !== undefined ? Number(stock) : product.stock;
+
+    // Convert discount to a valid number
+    let discountPercentage = discount?.percentage ? Number(discount.percentage) : product.discount.percentage;
+    if (isNaN(discountPercentage)) {
+      discountPercentage = 0; // Default to 0 if invalid
+    }
 
     // Calculate offerPrice after discount
-    let newPrice = price !== undefined ? Number(price) : product.price;
-    let offerPrice = discount > 0 ? newPrice - (newPrice * discount) / 100 : newPrice;
+    let offerPrice = discountPercentage > 0 ? newPrice - (newPrice * discountPercentage) / 100 : newPrice;
     let finalPrice = offerPrice; // Modify as needed for tax/shipping
+
+    // Convert `ingredients` safely (ensure it's always an array)
+    let newIngredients = Array.isArray(ingredients) ? ingredients : product.ingredients;
+
+    // Convert `shades` and `sizes` safely (ensure they are arrays)
+    let newShades = shades ? (Array.isArray(shades) ? shades : JSON.parse(shades)) : product.shades;
+    let newSizes = sizes ? (Array.isArray(sizes) ? sizes : JSON.parse(sizes)) : product.sizes;
 
     // Update the product
     product = await Product.findByIdAndUpdate(
@@ -177,13 +241,13 @@ export const updateProductController = async (req, res) => {
         description: description || product.description,
         category: category || product.category,
         price: newPrice,
-        stock: stock !== undefined ? stock : product.stock,
-        discount: { percentage: discount },
+        stock: newStock,
+        discount: { percentage: discountPercentage, validUntil: discount?.validUntil || product.discount.validUntil },
         offerPrice,
         finalPrice,
-        ingredients: ingredients ? ingredients.split(",") : product.ingredients,
-        shades: shades ? JSON.parse(shades) : product.shades,
-        sizes: sizes ? JSON.parse(sizes) : product.sizes,
+        ingredients: newIngredients,
+        shades: newShades,
+        sizes: newSizes,
         isFeatured: isFeatured !== undefined ? isFeatured === "true" : product.isFeatured,
         isOnSale: isOnSale !== undefined ? isOnSale === "true" : product.isOnSale,
         isNewArrival: isNewArrival !== undefined ? isNewArrival === "true" : product.isNewArrival,
@@ -198,6 +262,8 @@ export const updateProductController = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
+
 
 
 

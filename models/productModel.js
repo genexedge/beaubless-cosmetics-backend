@@ -1,5 +1,26 @@
 import mongoose from "mongoose";
 import slugify from "slugify";
+
+const productReviewSchema = new mongoose.Schema(
+  {
+    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    uid:{ type: String },
+    email:{ type: String,required: true },
+    name: { type: String },
+    userType:{ type: String },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    comment: { type: String, required: true },
+    reply: {
+      text: { type: String },
+      repliedAt: { type: Date },
+    },
+    images: [{ type: String }], // Array for review images
+    verifiedPurchase: { type: Boolean, default: false }, // True if user has purchased the product
+    helpfulVotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Track who found it helpful
+  },
+  { timestamps: true }
+);
+
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -24,12 +45,36 @@ const productSchema = new mongoose.Schema(
       },
     ],
     ingredients: [{ type: String }],
-    sizes: [{ type: String }], // XS, S, M, L, etc.
-    ratings: {
-      average: { type: Number, default: 0 },
-      reviews: { type: Number, default: 0 },
+    // NEW FIELD: Product Type
+    productType: { type: String, enum: ["single", "variant"], required: true },
+
+    // Stock for Single Products
+    stock: {
+      type: Number,
+      required: function () {
+        return this.productType === "single";
+      },
+      default: 0,
     },
-    reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "ProductReview" }],
+
+    // If productType is "variant", this will store sizes & inventory
+    variants: {
+      type: [
+        {
+          size: { type: String, required: true }, // Example: "L", "ML", "XL"
+          inventory: { type: Number, required: true, default: 0 }, // Available stock
+          price: { type: Number, required: true }, // Price per size
+        },
+      ],
+      validate: {
+        validator: function (v) {
+          return this.productType === "variant" ? v.length > 0 : true;
+        },
+        message: "Variants required for productType 'variant'.",
+      },
+    },
+
+    reviews: [productReviewSchema],
 
     isFeatured: { type: Boolean, default: false },
     isOnSale: { type: Boolean, default: false },

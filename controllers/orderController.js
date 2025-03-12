@@ -4,6 +4,8 @@ import axios from "axios";
 import crypto from "crypto";
 import userModel from "../models/userModel.js";
 import cartModel from "../models/cartModel.js";
+import { sendOrderStatusEmail } from "../controllers/emailController.js";
+
 export const getAllOrder = async (req, res) => {
   try {
     const orders = await Order.find(); // Renamed variable to avoid conflict
@@ -265,5 +267,37 @@ export const verifyPaymentController = async (req, res) => {
       message: "Error verifying payment",
       error: error.message,
     });
+  }
+};
+
+// ✅ Update Order Status API
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { orderId, newStatus } = req.body;
+
+    // Validate newStatus
+    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"];
+    if (!validStatuses.includes(newStatus)) {
+      return res.status(400).json({ success: false, message: "Invalid order status!" });
+    }
+
+    // Find the order
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found!" });
+    }
+
+    // Update order status and push to statusHistory
+    order.orderStatus = newStatus;
+    order.statusHistory.push({ status: newStatus, updatedAt: new Date() });
+
+    await order.save();
+     // Send email notification
+     sendOrderStatusEmail(order.email, orderId, newStatus);
+
+    res.status(200).json({ success: true, message: "Order status updated!", order });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

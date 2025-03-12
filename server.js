@@ -9,6 +9,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import wishListRoutes from "./routes/wishListRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import couponRoutes from "./routes/couponRoutes.js";
 import multer from "multer";
 import bodyParser from "body-parser";
 import path from "path";
@@ -31,7 +32,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
-
 // Routes
 app.use("/api/v1/products", productRoutes);
 app.use("/api/v1/blogs", blogRoutes);
@@ -40,6 +40,7 @@ app.use("/api/v1/order", orderRoutes);
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/wishlist", wishListRoutes);
 app.use("/api/v1/", contactRoutes);
+app.use("/api/v1/coupon", couponRoutes);
 
 // Root Route
 app.get("/", (req, res) => {

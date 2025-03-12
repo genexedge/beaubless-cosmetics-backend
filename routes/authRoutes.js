@@ -14,6 +14,7 @@ import {
   registerController,
   testController,
   updateProfileController,
+  addAddress, updateAddress, deleteAddress, setDefaultAddress
 } from "../controllers/authController.js";
 import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
 
@@ -70,5 +71,16 @@ router.get("/getAllUser", async (req, res) => {
 });
 
 
+// Add a new address
+router.post("/address/add", addAddress);
+
+// Update an existing address
+router.put("/address/update", updateAddress);
+
+// Delete an address
+router.delete("/address/delete", deleteAddress);
+
+// Set a default address
+router.put("/address/set-default", setDefaultAddress);
 
 export default router;
