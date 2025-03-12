@@ -50,6 +50,10 @@ const BlogPostSchema = new mongoose.Schema({
   description3: {
     type: String,
   },
+  author:{
+    type:String,
+    default:"Beaubless"
+  },
   delay: {
     type: String,
     default: "0s",

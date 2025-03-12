@@ -12,6 +12,7 @@ import {
 
 } from "../controllers/productController.js";
 import upload from "../middlewares/multerConfig.js";
+import { deleteReview, getProductReviews, submitReview, updateReview } from "../controllers/reviewController.js";
 
 const router = express.Router(); // Creating an instance of Express Router to define routes
 
@@ -34,5 +35,18 @@ router.delete("/delete-product/:pid", deleteProductController); //delete product
 router.post("/many-products", insertManyProductsController);
 router.get("/get-products", getAllProductTwo);
 router.delete("/delete-category/:pid", deleteCategoryController);
+
+
+// ✅ Submit a review (with email verification)
+router.post("/review/submit", submitReview);
+
+// ✅ Get all reviews for a specific product
+router.get("/review/:productId", getProductReviews);
+
+// ✅ Update a review (User can update their own review)
+router.put("/review/:reviewId", updateReview);
+
+// ✅ Delete a review (User can delete their own review or admin can delete)
+router.delete("/review/:reviewId", deleteReview);
 
 export default router;

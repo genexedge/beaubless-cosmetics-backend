@@ -20,6 +20,7 @@ export const createBlog = async (req, res) => {
       title: req.body.title,
       slug: req.body.slug,
       date: req.body.date,
+      author:req.body.author,
       category: req.body.category,
       description: req.body.description,
       image: imageUrls, // Store array of images
@@ -130,13 +131,32 @@ export const deleteBlog = async (req, res) => {
   }
 };
 
+// Get Blog by Slug
+export const getBlogBySlug = async (req, res) => {
+    try {
+        const { slug } = req.params;
+
+        // Find the blog by slug and include comments
+        const blog = await Blog.findOne({ slug });
+
+        if (!blog) {
+            return res.status(404).json({ message: "Blog not found" });
+        }
+
+        res.status(200).json(blog);
+    } catch (error) {
+        res.status(500).json({ message: "Failed to fetch blog with comments", error });
+    }
+};
+
+
 // Add Comment to Blog Post
 export const addComment = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { slug } = req.params;
     const { user, text } = req.body;
 
-    const blog = await Blog.findById(id);
+    const blog = await Blog.findOne({ slug });
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
     }
@@ -159,9 +179,9 @@ export const addComment = async (req, res) => {
 // Delete Comment from Blog Post
 export const deleteComment = async (req, res) => {
   try {
-    const { blogId, commentId } = req.params;
+    const { slug, commentId } = req.params;
 
-    const blog = await Blog.findById(blogId);
+    const blog = await Blog.findOne({ slug });
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
     }
@@ -174,4 +194,31 @@ export const deleteComment = async (req, res) => {
     res.status(500).json({ message: "Failed to delete comment", error });
   }
 };
+
+// Edit Comment
+export const editComment = async (req, res) => {
+  try {
+    const { slug, commentId } = req.params;
+    const { text } = req.body;
+
+    const blog = await Blog.findOne({ slug });
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+
+    const comment = blog.comments.find((comment) => comment._id.toString() === commentId);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    comment.text = text; // Update the comment text
+    comment.updatedAt = new Date();
+
+    await blog.save();
+    res.status(200).json({ message: "Comment updated successfully", blog });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update comment", error });
+  }
+};
+
 

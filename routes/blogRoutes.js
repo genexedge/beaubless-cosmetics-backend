@@ -1,22 +1,43 @@
 import express from 'express';
-import { createBlog, getAllBlogs, getBlogById, updateBlog, deleteBlog } from '../controllers/blogController.js';
+import {
+  createBlog,
+  getAllBlogs,
+  getBlogBySlug,
+  updateBlog,
+  deleteBlog,
+  addComment,
+  deleteComment,
+  editComment,
+} from '../controllers/blogController.js';
+
+import upload from "../middlewares/multerConfig.js";
 
 const router = express.Router();
-import upload from "../middlewares/multerConfig.js";
+
 // Create Blog
-router.post('/create',upload.array("image", 10), createBlog);
+router.post('/create', upload.array("image", 10), createBlog);
 
 // Get All Blogs
-router.get('/get-all-blog', getAllBlogs);
+router.get('/get-all-blogs', getAllBlogs);
 
-// Get Blog by ID
-router.get('/:id', getBlogById);
+// Get Blog by Slug
+router.get('/:slug', getBlogBySlug);
 
 // Update Blog
-router.put('/update/:id', updateBlog);
+router.put('/update/:slug', updateBlog);
 
 // Delete Blog
-router.delete('/delete/:id', deleteBlog);
+router.delete('/delete/:slug', deleteBlog);
+
+// Add Comment
+router.post('/:slug/comment', addComment);
+
+// Delete Comment
+router.delete('/:slug/comment/:commentId', deleteComment);
+
+// Edit Comment
+router.put('/:slug/comment/:commentId', editComment);
+
 
 
 export default router;

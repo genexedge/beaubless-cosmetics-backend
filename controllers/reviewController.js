@@ -7,31 +7,31 @@ export const submitReview = async (req, res) => {
   try {
     const { productId, email, userName, rating, comment, images } = req.body;
 
-    // Validate input fields
     if (!productId || !email || !rating || !comment || !userName) {
       return res.status(400).json({ message: "All fields are required." });
     }
 
-    // Validate product ID
     if (!mongoose.Types.ObjectId.isValid(productId)) {
       return res.status(400).json({ message: "Invalid product ID." });
     }
-    const productObjectId = new mongoose.Types.ObjectId(productId);
 
-    // Check if user has purchased the product
+    const productObjectId = new mongoose.Types.ObjectId(productId);
+    console.log("Product ID from request:", productId);
+    console.log("Converted Product Object ID:", productObjectId);
+
+    // Check if the user has purchased the product
     const hasPurchased = await Order.exists({
       email,
       "items.productId": productObjectId,
-      status: "Completed",
+      status: "Completed", // Ensure this matches your order schema
     });
 
+    console.log("Has purchased:", hasPurchased);
+
     if (!hasPurchased) {
-      return res.status(403).json({
-        message: "You have not purchased this product yet.",
-      });
+      return res.status(403).json({ message: "You have not purchased this product yet." });
     }
 
-    // Create new review
     const newReview = new ProductReview({
       product: productObjectId,
       user: { name: userName, email },
@@ -45,6 +45,7 @@ export const submitReview = async (req, res) => {
     await newReview.save();
     res.status(201).json({ message: "Review submitted successfully!", review: newReview });
   } catch (error) {
+    console.error("Error submitting review:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };

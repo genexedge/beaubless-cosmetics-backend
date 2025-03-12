@@ -27,6 +27,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v0.0.8  | updated Product,blog,category,user Add,deleted API | Rishabh |
 | v0.0.9  | order API                                          | Rishabh |
 | v1.0.1  | Changed Product System                             | Sunil   |
+| v1.0.2  | Changed Product System                             | Sunil   |
 
 ## Installation
 

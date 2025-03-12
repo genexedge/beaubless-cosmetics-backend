@@ -34,7 +34,7 @@ app.use("/uploads", express.static("uploads"));
 
 // Routes
 app.use("/api/v1/products", productRoutes);
-app.use("/api/v1/blog", blogRoutes);
+app.use("/api/v1/blogs", blogRoutes);
 app.use("/api/v1/cart", cartRoutes);
 app.use("/api/v1/order", orderRoutes);
 app.use("/api/v1/auth", authRoutes);
