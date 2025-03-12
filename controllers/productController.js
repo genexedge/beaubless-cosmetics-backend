@@ -12,37 +12,60 @@ export const createProductController = async (req, res) => {
 
     const imageUrls = req.files.map((file) => file.path); // Get Cloudinary URLs
 
-    const {
+    let {
       name,
       brand,
-      description,
+      slug,
       shortDescription,
+      description,
       category,
       price,
       stock,
-      discount,
+      discount = 0,
       ingredients,
-      ratings,
       isFeatured,
+      isOnSale,
+      isNewArrival,
+      shades,
+      sizes
     } = req.body;
 
     if (!name || !brand || !description || !category || !price || !stock) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
 
-    // Save product to DB (assuming you're using MongoDB)
+    // Convert discount to a number if it's sent as a string
+    discount = Number(discount);
+
+    // Calculate offerPrice after discount
+    let offerPrice = price;
+    if (discount > 0) {
+      offerPrice = price - (price * discount) / 100;
+    }
+
+    // Calculate finalPrice (assuming no additional tax/shipping for now)
+    let finalPrice = offerPrice; // Modify as needed if tax/shipping applies
+
+    // Create new product instance
     const newProduct = new Product({
       name,
       brand,
+      slug,
       shortDescription,
       description,
       category,
       price,
       stock,
-      discount: discount ? { percentage: discount } : null,
+      discount: { percentage: discount },
+      offerPrice,
+      finalPrice,
+      
       ingredients: ingredients ? ingredients.split(",") : [],
-      ratings: ratings ? { average: ratings, reviews: 0 } : { average: 0, reviews: 0 },
+      shades: shades ? JSON.parse(shades) : [],
+      sizes: sizes ? JSON.parse(sizes) : [],
       isFeatured: isFeatured === "true",
+      isOnSale: isOnSale === "true",
+      isNewArrival: isFeatured === "true",
       images: imageUrls, // Store Cloudinary URLs
     });
 
@@ -53,6 +76,7 @@ export const createProductController = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
 
 // Route to get all products
 export const getAllProductController = async (req, res) => {
@@ -67,6 +91,7 @@ export const getAllProductController = async (req, res) => {
       products,
     });
   } catch (error) {
+    console.log(error)
     // Handle errors and send failure response
     res.status(401).send({
       success: false,
@@ -101,41 +126,80 @@ export const getSingleProductController = async (req, res) => {
 // Route to update a product
 export const updateProductController = async (req, res) => {
   try {
-    const { pid } = req.params; // get product id from url
-    const { name, brand, description, category, price, stock } = req.body;
+    console.log("Request Body:", req.body);
+    console.log("Uploaded Files:", req.files);
 
-    // Check if the product exists
+    const { pid } = req.params; // Get product ID from URL
+
+    let {
+      name,
+      brand,
+      slug,
+      shortDescription,
+      description,
+      category,
+      price,
+      stock,
+      discount,
+      ingredients,
+      isFeatured,
+      isOnSale,
+      isNewArrival,
+      shades,
+      sizes
+    } = req.body;
+
+    // Find the existing product
     let product = await Product.findById(pid);
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    // If new images are uploaded, replace old images with new ones
-    const images =
-      req.files.length > 0
-        ? req.files.map((file) => `/uploads/${file.filename}`)
-        : product.images;
+    // Handle images: Keep old ones if no new ones are uploaded
+    const imageUrls = req.files.length > 0 ? req.files.map((file) => file.path) : product.images;
+
+    // Convert discount to a number
+    discount = discount !== undefined ? Number(discount) : product.discount.percentage;
+
+    // Calculate offerPrice after discount
+    let newPrice = price !== undefined ? Number(price) : product.price;
+    let offerPrice = discount > 0 ? newPrice - (newPrice * discount) / 100 : newPrice;
+    let finalPrice = offerPrice; // Modify as needed for tax/shipping
 
     // Update the product
     product = await Product.findByIdAndUpdate(
       pid,
-      { name, brand, description, category, price, stock, images },
+      {
+        name: name || product.name,
+        brand: brand || product.brand,
+        slug: slug || product.slug,
+        shortDescription: shortDescription || product.shortDescription,
+        description: description || product.description,
+        category: category || product.category,
+        price: newPrice,
+        stock: stock !== undefined ? stock : product.stock,
+        discount: { percentage: discount },
+        offerPrice,
+        finalPrice,
+        ingredients: ingredients ? ingredients.split(",") : product.ingredients,
+        shades: shades ? JSON.parse(shades) : product.shades,
+        sizes: sizes ? JSON.parse(sizes) : product.sizes,
+        isFeatured: isFeatured !== undefined ? isFeatured === "true" : product.isFeatured,
+        isOnSale: isOnSale !== undefined ? isOnSale === "true" : product.isOnSale,
+        isNewArrival: isNewArrival !== undefined ? isNewArrival === "true" : product.isNewArrival,
+        images: imageUrls,
+      },
       { new: true, runValidators: true }
     );
 
-    res.status(200).json({
-      success: true,
-      message: "Product updated successfully",
-      product,
-    });
+    res.status(200).json({ success: true, message: "Product updated successfully", product });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error updating product",
-      error: error.message,
-    });
+    console.error(error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
+
+
 
 // Route to delete a product
 

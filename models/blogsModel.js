@@ -1,7 +1,28 @@
 import mongoose from "mongoose";
 
+// Comment Schema
+const CommentSchema = new mongoose.Schema({
+  userName: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+  },
+  comment: {
+    type: String,
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Blog Schema
 const BlogPostSchema = new mongoose.Schema({
-  image: [{ type: String }],
+  image: [{ type: String }], // Array of image URLs
   alt: {
     type: String,
     default: "",
@@ -17,6 +38,7 @@ const BlogPostSchema = new mongoose.Schema({
   slug: {
     type: String,
     required: true,
+    unique: true, // Ensure slug is unique
   },
   description: {
     type: String,
@@ -40,6 +62,7 @@ const BlogPostSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  comments: [CommentSchema], // Embedded comments array
   createdAt: {
     type: Date,
     default: Date.now,

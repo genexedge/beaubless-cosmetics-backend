@@ -147,15 +147,16 @@ export const createOrderController = async (req, res) => {
 
       // Make API Request to PhonePe
       const response = await axios.post(
-        ${process.env.PHONEPE_BASE_URL}/pg/v1/pay,
-        { request: base64Payload },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "X-VERIFY": xVerify,
-          },
-        }
-      );
+  `${process.env.PHONEPE_BASE_URL}/pg/v1/pay`, // Correctly wrap in backticks
+  { request: base64Payload },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      "X-VERIFY": xVerify,
+    },
+  }
+);
+
     }
     if (response?.data?.success) {
       // Save order in DB (Mark it as "Payment Pending")

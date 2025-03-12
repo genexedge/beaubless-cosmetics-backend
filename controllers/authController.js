@@ -41,22 +41,26 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 
 const transporter = nodemailer.createTransport({
-  host: "smtppro.zoho.in", // Zoho's SMTP server
-  port: 465, // SSL Port
-  secure: true, // SSL encryption
+  host: "smtppro.zoho.in",
+  port: 465,
+  secure: true,
   auth: {
-    user: process.env.EMAIL_USER, // Your Zoho email (e.g., example@yourdomain.com)
-    pass: process.env.EMAIL_PASS, // Your Zoho email password or app password
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
-transporter.verify(function (error, success) {
-  if (error) {
-    console.log("SMTP Connection Error:", error);
-  } else {
-    console.log("SMTP Connected Successfully!");
-  }
-});
 
+async function verifySMTPConnection() {
+  try {
+    await transporter.verify();
+    console.log("✅ SMTP Connected Successfully!");
+  } catch (error) {
+    console.warn("⚠️ SMTP Warning: Connection issue detected.", error.message);
+  }
+}
+
+// Call the function
+verifySMTPConnection();
 
 export const registerController = async (req, res) => {
   try {
