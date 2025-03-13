@@ -46,7 +46,7 @@ const productSchema = new mongoose.Schema(
     ],
     ingredients: [{ type: String }],
     // NEW FIELD: Product Type
-    productType: { type: String, enum: ["single", "variant"], required: true },
+    productType: { type: String, enum: ["single", "variant","combo"], required: true },
 
     // Stock for Single Products
     stock: {
@@ -63,7 +63,8 @@ const productSchema = new mongoose.Schema(
         {
           size: { type: String, required: true }, // Example: "L", "ML", "XL"
           inventory: { type: Number, required: true, default: 0 }, // Available stock
-          price: { type: Number, required: true }, // Price per size
+          offerprice: { type: Number, required: true }, // Price per size
+          finalprice: { type: Number, required: true }, // Price per size
         },
       ],
       validate: {

@@ -9,12 +9,7 @@ export const createBlog = async (req, res) => {
     console.log("Uploaded Files:", req.files);
 
     // Upload images to Cloudinary
-    const imageUrls = await Promise.all(
-      req.files.map(async (file) => {
-        const result = await cloudinary.uploader.upload(file.path, { folder: "beaubless" });
-        return result.secure_url;
-      })
-    );
+    const imageUrls = req.files && req.files.length > 0 ? req.files.map((file) => file.path) : req.body.images || [];
 
     const blog = new Blog({
       title: req.body.title,
