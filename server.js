@@ -46,7 +46,7 @@ app.use("/api/v1/coupon", couponRoutes);
 app.get("/", (req, res) => {
   res.send("API is running successfully!");
 });
-
+app.use(cors());
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
