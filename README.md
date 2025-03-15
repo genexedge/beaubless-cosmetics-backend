@@ -30,6 +30,8 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v1.0.2  | Changed Product System                             | Sunil   |
 | v1.0.4  | order Status API,product API,user Address API      | Rishabh |
 | v1.0.5  | Corrected Cart and API System                      | Sunil   |
+| v1.0.5  | Corrected Cart and API System                      | Sunil   |
+| v1.0.9  | Single product api                                 | Sunil   |
 
 ## Installation
 
