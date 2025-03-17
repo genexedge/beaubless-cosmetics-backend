@@ -69,12 +69,19 @@ export const updateCartQuantityController = async (req, res) => {
       return res.status(404).json({ success: false, message: "Cart not found" });
     }
 
+    console.log("Cart Products:", cart.products);
+console.log("Product ID:", productId);
+console.log("Active Size:", activeSize);
     // Find the product in the cart
     const productIndex = cart.products.findIndex(
-      (item) =>
-        item.productId.toString() === productId &&
-        (activeSize ? item.activeSize === activeSize : true)
-    );
+  (item) => {
+    console.log("Product ID Match:", item.productId.toString() === productId);
+    console.log("Active Size Match:", item.activeSize.toString() === activeSize);
+    return item.productId.toString() === productId &&
+      (!activeSize || item.activeSize.toString() === activeSize);
+  }
+);
+
 
     if (productIndex === -1) {
       return res.status(404).json({ success: false, message: "Product not found in cart" });
@@ -246,14 +253,11 @@ export const removeFromCartController = async (req, res) => {
     if (!cart) {
       return res.status(404).json({ success: false, message: "Cart not found" });
     }
-
-    // Remove product based on productId and activeSize (if provided)
-    cart.products = cart.products.filter(
-      (item) =>
-        item.productId.toString() !== productId ||
-        (activeSize && item.activeSize !== activeSize)
-    );
-
+   const newCart = cart.products.filter((item) => {
+  return item._id.toString() !== productId && item.activeSize.toString() !== activeSize;
+});
+    cart.products = newCart;
+  
     if (cart.products.length === 0) {
       await Cart.findByIdAndDelete(cart._id);
       return res.status(200).json({
