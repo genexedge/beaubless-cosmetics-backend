@@ -16,32 +16,36 @@ export const getAllOrder = async (req, res) => {
 };
 //controller for creating order
 //controller for creating order
+
 export const createOrderController = async (req, res) => {
   try {
     const {
-      email: email,
-      firstName: firstName,
-      lastName: lastName,
-      phone: phone,
-      address: address,
-      cartProducts: cartProducts,
-      totalPrice: totalPrice,
-      note: note,
-      paymentMethod: paymentMethod,
+      email,
+      firstName,
+      lastName,
+      phone,
+      address,
+      cartProducts,
+      totalPrice,
+      note,
+      paymentMethod,
+      activeCoupon,
+      discountDetails,
+      selectedShippingOption,
     } = req.body.orderData;
+
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
     }
 
     // Check if the user exists
     const user = await userModel.findOne({ email });
-    let userId = null;
-    let backendCart = null;
+    let userId = user ? user._id : null;
     let backendCartMap = new Map();
-    // If user is logged in, fetch backend cart
+
+    // If user is logged in, fetch backend cart for validation
     if (user) {
-      userId = user._id
-      backendCart = await cartModel
+      const backendCart = await cartModel
         .findOne({ email })
         .populate("products.productId");
 
@@ -57,46 +61,57 @@ export const createOrderController = async (req, res) => {
 
     // Cart validation
     let calculatedTotal = 0;
+    let discountAmount = 0;
     let isGuestOrder = !user;
+
     for (let item of cartProducts) {
-      const productId = item.id; // Updated key from payload
+      const productId = item._id;
       const quantity = item.quantity;
-      let price = item.price; // Base price
-
-      // Apply discount if available
-      if (item.discount && item.discount.percentage) {
-        const discountAmount = (item.price * item.discount.percentage) / 100;
-        price -= discountAmount; // Adjust price after discount
-      }
-
+      let price = item.offerPrice || item.finalPrice;
+      // Validate backend cart (if logged in)
       if (!isGuestOrder) {
-        // If user is logged in, verify cart from backend
         if (!backendCartMap.has(productId)) {
           return res.status(400).json({ message: "Cart mismatch detected" });
         }
-
-        // Validate quantity
         if (backendCartMap.get(productId).quantity !== quantity) {
           return res
             .status(400)
             .json({ message: "Cart quantity mismatch detected" });
         }
-
-        // Validate price (post-discount)
-        const backendPrice = backendCartMap.get(productId).price;
-        if (backendPrice !== item.price) {
+        if (backendCartMap.get(productId).price !== item.price) {
           return res.status(400).json({ message: "Price mismatch detected" });
         }
       }
 
-      // Calculate total price for both guest and logged-in users
+      // Accumulate total price before discount
       calculatedTotal += price * quantity;
     }
-    // Final price validation
-    // if (calculatedTotal !== totalPrice) {
-    //   return res.status(400).json({ message: "Total price mismatch detected" });
-    // }
-    // Create order
+
+    // Apply coupon discount
+    if (activeCoupon) {
+      if (activeCoupon.discountType === "flat") {
+        discountAmount = activeCoupon.discountValue;
+      } else if (activeCoupon.discountType === "percentage") {
+        discountAmount = (calculatedTotal * activeCoupon.discountValue) / 100;
+        discountAmount = Math.min(
+          discountAmount,
+          activeCoupon.maxDiscount || discountAmount
+        );
+      }
+    }
+    // Calculate final price
+    let finalTotalPrice = Math.max(calculatedTotal - discountAmount, 0);
+    if (selectedShippingOption) {
+      finalTotalPrice += selectedShippingOption.charges;
+    }
+    if (
+      parseFloat(finalTotalPrice).toFixed(2) !==
+      parseFloat(totalPrice).toFixed(2)
+    ) {
+      return res.status(400).json({ message: "Total price mismatch detected" });
+    }
+
+    // Create order object
     const newOrder = new Order({
       userId,
       email,
@@ -104,32 +119,33 @@ export const createOrderController = async (req, res) => {
       lastName,
       phone,
       address,
-      cartProducts, // Keep full details for processing
-      totalPrice: calculatedTotal, // Use validated total price
+      cartProducts,
+      totalPrice: finalTotalPrice,
+      discountAmount,
       note,
       paymentMethod,
-      userId: user ? user._id : null,
-      isGuestOrder, // Flag to differentiate orders
+      isGuestOrder,
     });
-    // COD Payment - Direct Order Placement
+
+    // If COD, save order and return success
     if (paymentMethod === "COD") {
       newOrder.paymentStatus = "Pending";
       await newOrder.save();
-      await Cart.deleteOne({ email });
+      await cartModel.deleteOne({ email });
       return res
         .status(201)
         .json({ success: true, message: "Order placed successfully" });
-    } else {
-      // Online Payment - Proceed with PhonePe
+    } else if (paymentMethod === "PhonePe") {
+      // Process PhonePe Payment
       const merchantTransactionId = "TXN" + Date.now();
       const requestPayload = {
         merchantId: process.env.PHONEPE_MERCHANT_ID,
         merchantTransactionId,
         merchantUserId: email,
-        amount: totalPrice * 100, // Amount in paise
-        redirectUrl: "https://pay.domain.com/payment-success",
+        amount: finalTotalPrice * 100, // Convert to paise
+        redirectUrl: `${process.env.FRONTEND_URL}/order-success`,
         redirectMode: "REDIRECT",
-        callbackUrl: "https://pay.domain.com/payment-callback",
+        callbackUrl: `${process.env.BACKEND_URL}/api/v1/order/verify-payment`,
         paymentInstrument: { type: "PAY_PAGE" },
       };
 
@@ -138,57 +154,44 @@ export const createOrderController = async (req, res) => {
         JSON.stringify(requestPayload)
       ).toString("base64");
 
-      // Compute X-VERIFY Checksum
+      // Compute X-VERIFY
       const checksumString =
         base64Payload + "/pg/v1/pay" + process.env.PHONEPE_SALT_KEY;
-      const checksum = crypto
-        .createHash("sha256")
-        .update(checksumString)
-        .digest("hex");
-        const statusPayload = `/pg/v1/status/${process.env.PHONEPE_MERCHANT_ID}/${transactionId}`;
+      const xVerify =
+        crypto.createHash("sha256").update(checksumString).digest("hex") +
+        "###" +
+        process.env.PHONEPE_SALT_INDEX;
 
-      // Make API Request to PhonePe
+      // Send request to PhonePe API
       const response = await axios.post(
-  `${process.env.PHONEPE_BASE_URL}/pg/v1/pay`, // Correctly wrap in backticks
-  { request: base64Payload },
-  {
-    headers: {
-      "Content-Type": "application/json",
-      "X-VERIFY": xVerify,
-    },
-  }
-);
+        `${process.env.PHONEPE_BASE_URL}/pg/v1/pay`,
+        { request: base64Payload },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "X-VERIFY": xVerify,
+          },
+        }
+      );
 
-    }
-    if (response?.data?.success) {
-      // Save order in DB (Mark it as "Payment Pending")
-      const newOrder = new Order({
-        userId,
-        email,
-        firstName,
-        lastName,
-        phone,
-        address,
-        products: cart.products,
-        totalAmount: totalPrice,
-        note,
-        paymentMethod,
-        phonepeTransactionId: merchantTransactionId,
-        paymentStatus: "Pending", // Will be updated upon payment success
-      });
+      if (response?.data?.success) {
+        newOrder.phonepeTransactionId = merchantTransactionId;
+        newOrder.paymentStatus = "Pending";
+        await newOrder.save();
+        await cartModel.deleteOne({ email });
 
-      await newOrder.save();
-      await Cart.deleteOne({ email });
-
-      return res.status(201).json({
-        success: true,
-        message: "Order created successfully, redirecting to payment.",
-        paymentUrl: response?.data?.data?.instrumentResponse?.redirectInfo?.url,
-      });
+        return res.status(201).json({
+          success: true,
+          message: "Order created successfully, redirecting to payment.",
+          paymentUrl: response.data.data.instrumentResponse.redirectInfo.url,
+        });
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, message: "PhonePe payment failed" });
+      }
     } else {
-      return res
-        .status(400)
-        .json({ success: false, message: "PhonePe payment failed" });
+      return res.status(500).json({ error: "Internal Server Error" });
     }
   } catch (error) {
     console.error("Checkout Error:", error.message);
@@ -276,16 +279,27 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId, newStatus } = req.body;
 
     // Validate newStatus
-    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"];
+    const validStatuses = [
+      "Pending",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Completed",
+      "Cancelled",
+    ];
     if (!validStatuses.includes(newStatus)) {
-      return res.status(400).json({ success: false, message: "Invalid order status!" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid order status!" });
     }
 
     // Find the order
     const order = await Order.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found!" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found!" });
     }
 
     // Update order status and push to statusHistory
@@ -293,10 +307,12 @@ export const updateOrderStatus = async (req, res) => {
     order.statusHistory.push({ status: newStatus, updatedAt: new Date() });
 
     await order.save();
-     // Send email notification
-     sendOrderStatusEmail(order.email, orderId, newStatus);
+    // Send email notification
+    sendOrderStatusEmail(order.email, orderId, newStatus);
 
-    res.status(200).json({ success: true, message: "Order status updated!", order });
+    res
+      .status(200)
+      .json({ success: true, message: "Order status updated!", order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
