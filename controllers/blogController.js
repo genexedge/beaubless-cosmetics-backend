@@ -55,23 +55,29 @@ export const getBlogById = async (req, res) => {
 // Update Blog Post
 export const updateBlog = async (req, res) => {
   try {
+    console.log(req.params);
+    console.log(req.body);
     const { id } = req.params;
+    console.log("Updating blog with ID:", id);
+    
     const blog = await Blog.findById(id);
-
+    
     if (!blog) {
       return res.status(404).json({ message: "Blog not found" });
     }
 
-    let updatedImageUrls = blog.image;
+    let updatedImageUrls = blog.image; // Keep existing images if no new ones are uploaded
 
-    if (req.files.length > 0) {
+    if (req.files && req.files.length > 0) {
       // Delete old images from Cloudinary
-      for (const imageUrl of blog.image) {
-        try {
-          const publicId = imageUrl.split("/").pop().split(".")[0];
-          await cloudinary.uploader.destroy(`beaubless/${publicId}`);
-        } catch (cloudinaryError) {
-          console.error("Cloudinary Deletion Error:", cloudinaryError);
+      if (blog.image && blog.image.length > 0) {
+        for (const imageUrl of blog.image) {
+          try {
+            const publicId = imageUrl.split("/").pop().split(".")[0];
+            await cloudinary.uploader.destroy(`beaubless/${publicId}`);
+          } catch (cloudinaryError) {
+            console.error("Cloudinary Deletion Error:", cloudinaryError);
+          }
         }
       }
 
@@ -84,45 +90,54 @@ export const updateBlog = async (req, res) => {
       );
     }
 
+    // Update blog with new data
     const updatedBlog = await Blog.findByIdAndUpdate(
       id,
       { ...req.body, image: updatedImageUrls },
-      { new: true }
+      { new: true, runValidators: true }
     );
 
     res.status(200).json({ message: "Blog updated successfully", blog: updatedBlog });
   } catch (error) {
-    res.status(500).json({ message: "Failed to update blog", error });
+    console.error("Error updating blog:", error);
+    res.status(500).json({ message: "Failed to update blog", error: error.message });
   }
 };
 
+
 // Delete Blog Post
+
 export const deleteBlog = async (req, res) => {
+  console.log("Request Params:", req.params);
+  
   try {
-    const { id } = req.params;
-    const blog = await Blog.findById(id);
+      const { id } = req.params; // Corrected destructuring
 
-    if (!blog) {
-      return res.status(404).json({ message: "Blog not found" });
-    }
-
-    // Delete images from Cloudinary
-    for (const imageUrl of blog.image) {
-      try {
-        const publicId = imageUrl.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(`beaubless/${publicId}`);
-      } catch (cloudinaryError) {
-        console.error("Cloudinary Deletion Error:", cloudinaryError);
+      // Find the blog
+      const blog = await Blog.findById(id);
+      if (!blog) {
+          return res.status(404).json({ message: "Blog not found" });
       }
-    }
 
-    // Delete blog from the database
-    await Blog.findByIdAndDelete(id);
+      // Delete images from Cloudinary (if images exist)
+      if (blog.image && Array.isArray(blog.image)) {
+          for (const imageUrl of blog.image) {
+              try {
+                  const publicId = imageUrl.split("/").pop().split(".")[0];
+                  await cloudinary.uploader.destroy(`beaubless/${publicId}`);
+              } catch (cloudinaryError) {
+                  console.error("Cloudinary Deletion Error:", cloudinaryError);
+              }
+          }
+      }
 
-    res.status(200).json({ success: true, message: "Blog deleted successfully" });
+      // Delete the blog from the database
+      await Blog.findByIdAndDelete(id);
+
+      res.status(200).json({ success: true, message: "Blog deleted successfully" });
   } catch (error) {
-    console.error("Error deleting blog:", error);
-    res.status(500).json({ message: "Failed to delete blog", error });
+      console.error("Error deleting blog:", error);
+      res.status(500).json({ message: "Failed to delete blog", error });
   }
 };
 
