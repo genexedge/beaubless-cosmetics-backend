@@ -125,7 +125,7 @@ export const createOrderController = async (req, res) => {
       phone,
       address,
       cartProducts,
-      totalPrice: finalTotalPrice,
+      totalPrice,
       discountAmount,
       note,
       paymentMethod,
