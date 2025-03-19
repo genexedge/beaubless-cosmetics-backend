@@ -185,6 +185,7 @@ export const createOrderController = async (req, res) => {
     // If COD, save order and return success
     if (paymentMethod === "COD") {
       newOrder.paymentStatus = "Pending";
+      newOrder.orderId = "";
       await newOrder.save();
       await cartModel.deleteOne({ email });
       return res.status(201).json({ success: true, message: "Order placed successfully" });
@@ -194,6 +195,7 @@ export const createOrderController = async (req, res) => {
 
       if (paymentResponse.success) {
         newOrder.phonepeTransactionId = paymentResponse.merchantTransactionId;
+        newOrder.orderId = paymentResponse.merchantTransactionId;
         newOrder.paymentStatus = "Pending";
         await newOrder.save();
         await cartModel.deleteOne({ email });
