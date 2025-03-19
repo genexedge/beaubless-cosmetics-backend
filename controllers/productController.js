@@ -136,13 +136,13 @@ export const getAllProductController = async (req, res) => {
   }
 };
 
-// Route to get single products
+// Route to get single product by slug
 export const getSingleProductController = async (req, res) => {
   try {
-    const { pid } = req.params;
+    const { slug } = req.params;
 
-    // Fetch product with reviews populated
-    const product = await Product.findOne({ _id: pid }).populate("reviews");
+    // Fetch product with reviews populated by slug
+    const product = await Product.findOne({ slug }).populate("reviews");
 
     if (!product) {
       return res.status(404).json({ success: false, message: "Product not found" });
@@ -172,6 +172,7 @@ export const getSingleProductController = async (req, res) => {
     });
   }
 };
+
 
 
 // Route to update a product

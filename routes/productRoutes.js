@@ -23,7 +23,7 @@ router.get("/get-all-product", getAllProductController); //get all product route
 router.get("/get-all-categories", getAllCategoriesController);
 router.post("/create-category", upload.array("image", 10), createCategoryController);
 
-router.get("/get-single-product/:pid", getSingleProductController); //get single product route
+router.get("/get-single-product/:slug", getSingleProductController); //get single product route
 
 router.put("/update-product/:pid",
 // upload.array("image", 2),

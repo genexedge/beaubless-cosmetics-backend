@@ -23,7 +23,7 @@ const orderSchema = new mongoose.Schema(
 
     cartProducts: [
       {
-        id: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+        productId : { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
         name: { type: String, required: true },
         brand: { type: String },
         shortDescription: { type: String },
@@ -46,35 +46,37 @@ const orderSchema = new mongoose.Schema(
 
     totalPrice: { type: Number, required: true },
     note: { type: String, default: "" },
-    paymentMethod: { type: String, required: true },
-    
-    orderStatus: {
-      type: String,
-      enum: ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"],
-      default: "Pending",
-    },
-
-    // ✅ Track Order Status History
-    statusHistory: [
-      {
-        status: {
-          type: String,
-          enum: ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"],
-        },
-        updatedAt: { type: Date, default: Date.now }, // Timestamp of status change
+      paymentMethod: { type: String, required: true },
+      activeCoupon: {},
+      discountDetails:{},
+      selectedShippingOption:{},
+      orderStatus: {
+        type: String,
+        enum: ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"],
+        default: "Pending",
       },
-    ],
 
-    paymentStatus: {
-      type: String,
-      enum: ["Pending", "Paid", "Failed"],
-      default: "Pending",
+      // ✅ Track Order Status History
+      statusHistory: [
+        {
+          status: {
+            type: String,
+            enum: ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"],
+          },
+          updatedAt: { type: Date, default: Date.now }, // Timestamp of status change
+        },
+      ],
+
+      paymentStatus: {
+        type: String,
+        enum: ["Pending", "Paid", "Failed","COD"],
+        default: "Pending",
+      },
+      phonepeTransactionId: { type: String },
+      isGuestOrder: { type: Boolean, default: false }, // Differentiates guest orders
     },
-    phonepeTransactionId: { type: String },
-    isGuestOrder: { type: Boolean, default: false }, // Differentiates guest orders
-  },
-  { timestamps: true }
-);
+    { timestamps: true }
+  );
 
 // ✅ Automatically add first status in history when creating a new order
 orderSchema.pre("save", function (next) {

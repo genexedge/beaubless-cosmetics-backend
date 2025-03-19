@@ -38,41 +38,6 @@ export const getOrderById = async (req, res) => {
 
 //controller for creating order
 //controller for creating order
-
-const clientId = "SU2503141233473872083112";
-const clientSecret = "b9d56a4b-23e1-4b91-a7a2-cdab25111fc5";
-const clientVersion = 1;
-const env = Env.PRODUCTION;
-const client = StandardCheckoutClient.getInstance(clientId, clientSecret, clientVersion, env);
-
-const initiatePhonePePayment = async (finalTotalPrice, email) => {
-  console.log(finalTotalPrice);
-  console.log(email);
-  try {
-    const merchantOrderId = "TXN" + Date.now();
-    const redirectUrl = `${process.env.FRONTEND_URL}/order-success`;
-
-    const request = StandardCheckoutPayRequest.builder()
-      .merchantOrderId(merchantOrderId)
-      .amount(finalTotalPrice * 100) // Convert amount to paise
-      .redirectUrl(redirectUrl)
-      .build();
-
-    const response = await client.pay(request);
-    console.log(response);
-    
-
-    return {
-      success: true,
-      paymentUrl: response.redirectUrl,
-      merchantTransactionId: merchantOrderId,
-    };
-  } catch (error) {
-    console.error("PhonePe Payment Error:", error);
-    return { success: false, message: "Payment initiation failed" };
-  }
-};
-
 export const createOrderController = async (req, res) => {
   try {
     console.log("Called");
@@ -124,9 +89,14 @@ export const createOrderController = async (req, res) => {
     for (let item of cartProducts) {
       const productId = item._id;
       const quantity = item.quantity;
-      let price = item.offerPrice || item.finalPrice;
+      let price = item.price; // Base price
 
-      // Validate backend cart (if logged in)
+      // Apply discount if available
+      if (item.discount && item.discount.percentage) {
+        const discountAmount = (item.price * item.discount.percentage) / 100;
+        price -= discountAmount; // Adjust price after discount
+      }
+
       if (!isGuestOrder) {
         if (!backendCartMap.has(productId)) {
           return res.status(400).json({ message: "Cart mismatch detected" });
@@ -142,31 +112,11 @@ export const createOrderController = async (req, res) => {
       // Accumulate total price before discount
       calculatedTotal += price * quantity;
     }
-
-    // Apply coupon discount
-    if (activeCoupon && activeCoupon.discountType && activeCoupon.discountValue) {
-      if (activeCoupon.discountType === "flat") {
-        discountAmount = activeCoupon.discountValue;
-      } else if (activeCoupon.discountType === "percentage") {
-        discountAmount = (calculatedTotal * activeCoupon.discountValue) / 100;
-        discountAmount = Math.min(
-          discountAmount,
-          activeCoupon.maxDiscount || discountAmount
-        );
-      }
-    }
-
-    // Calculate final price
-    let finalTotalPrice = Math.max(calculatedTotal - discountAmount, 0);
-    if (selectedShippingOption) {
-      finalTotalPrice += selectedShippingOption.charges;
-    }
-
-    if (parseFloat(finalTotalPrice).toFixed(2) !== parseFloat(totalPrice).toFixed(2)) {
-      return res.status(400).json({ message: "Total price mismatch detected" });
-    }
-
-    // Create order object
+    // Final price validation
+    // if (calculatedTotal !== totalPrice) {
+    //   return res.status(400).json({ message: "Total price mismatch detected" });
+    // }
+    // Create order
     const newOrder = new Order({
       userId,
       email,
@@ -187,29 +137,80 @@ export const createOrderController = async (req, res) => {
       newOrder.paymentStatus = "Pending";
       newOrder.orderId = 'COD';
       await newOrder.save();
-      await cartModel.deleteOne({ email });
-      return res.status(201).json({ success: true, message: "Order placed successfully" });
-    } else if (paymentMethod === "PhonePe") {
-      // Call the function to initiate PhonePe payment
-      const paymentResponse = await initiatePhonePePayment(totalPrice, email);
-        
-        
-      if (paymentResponse.success) {
-        newOrder.phonepeTransactionId = paymentResponse.merchantTransactionId;
-        newOrder.paymentStatus = "Pending";        
-        newOrder.orderId = paymentResponse.merchantTransactionId;
-        newOrder.phonepeTransactionId = paymentResponse.merchantTransactionId;
-        await newOrder.save();
-        await cartModel.deleteOne({ email });
+      await Cart.deleteOne({ email });
+      return res
+        .status(201)
+        .json({ success: true, message: "Order placed successfully" });
+    } else {
+      // Online Payment - Proceed with PhonePe
+      const merchantTransactionId = "TXN" + Date.now();
+      const requestPayload = {
+        merchantId: process.env.PHONEPE_MERCHANT_ID,
+        merchantTransactionId,
+        merchantUserId: email,
+        amount: totalPrice * 100, // Amount in paise
+        redirectUrl: "https://pay.domain.com/payment-success",
+        redirectMode: "REDIRECT",
+        callbackUrl: "https://pay.domain.com/payment-callback",
+        paymentInstrument: { type: "PAY_PAGE" },
+      };
 
-        return res.status(201).json({
-          success: true,
-          message: "Order created successfully, redirecting to payment.",
-          paymentUrl: paymentResponse.paymentUrl,
-        });
-      } else {
-        return res.status(400).json(paymentResponse);
-      }
+      // Convert payload to Base64
+      const base64Payload = Buffer.from(
+        JSON.stringify(requestPayload)
+      ).toString("base64");
+
+      // Compute X-VERIFY Checksum
+      const checksumString =
+        base64Payload + "/pg/v1/pay" + process.env.PHONEPE_SALT_KEY;
+      const checksum = crypto
+        .createHash("sha256")
+        .update(checksumString)
+        .digest("hex");
+        const statusPayload = `/pg/v1/status/${process.env.PHONEPE_MERCHANT_ID}/${transactionId}`;
+
+      // Make API Request to PhonePe
+      const response = await axios.post(
+  `${process.env.PHONEPE_BASE_URL}/pg/v1/pay`, // Correctly wrap in backticks
+  { request: base64Payload },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      "X-VERIFY": xVerify,
+    },
+  }
+);
+
+    }
+    if (response?.data?.success) {
+      // Save order in DB (Mark it as "Payment Pending")
+      const newOrder = new Order({
+        userId,
+        email,
+        firstName,
+        lastName,
+        phone,
+        address,
+        products: cart.products,
+        totalAmount: totalPrice,
+        note,
+        paymentMethod,
+        phonepeTransactionId: merchantTransactionId,
+        paymentStatus: "Pending", // Will be updated upon payment success
+      });
+
+      await newOrder.save();
+      await Cart.deleteOne({ email });
+
+      return res.status(201).json({
+        success: true,
+        message: "Order created successfully, redirecting to payment.",
+        paymentUrl: response?.data?.data?.instrumentResponse?.redirectInfo?.url,
+      });
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, message: "PhonePe payment failed" });
     }
   } catch (error) {
     console.error("Error placing order:", error);
@@ -333,16 +334,27 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId, newStatus } = req.body;
 
     // Validate newStatus
-    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"];
+    const validStatuses = [
+      "Pending",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Completed",
+      "Cancelled",
+    ];
     if (!validStatuses.includes(newStatus)) {
-      return res.status(400).json({ success: false, message: "Invalid order status!" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid order status!" });
     }
 
     // Find the order
     const order = await Order.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found!" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found!" });
     }
 
     // Update order status and push to statusHistory
@@ -350,40 +362,82 @@ export const updateOrderStatus = async (req, res) => {
     order.statusHistory.push({ status: newStatus, updatedAt: new Date() });
 
     await order.save();
-     // Send email notification
-     sendOrderStatusEmail(order.email, orderId, newStatus);
+    // Send email notification
+    sendOrderStatusEmail(order.email, orderId, newStatus);
 
-    res.status(200).json({ success: true, message: "Order status updated!", order });
+    res
+      .status(200)
+      .json({ success: true, message: "Order status updated!", order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
-
 export const cancelOrder = async (req, res) => {
   try {
-      const orderId = req.params.orderId;
-      console.log(`Cancelling order with ID: ${orderId}`);
+    const { orderId, newStatus } = req.body;
 
-      // Find the order in the database
-      const order = await Order.findById(orderId);
-      if (!order) {
-          return res.status(404).json({ message: "Order not found" });
-      }
+    if (!orderId || !newStatus) {
+      return res.status(400).json({
+        success: false,
+        message: "Order ID and new status are required!",
+      });
+    }
 
-      // Check if the order is already cancelled
-      if (order.orderStatus === "Cancelled") {
-          return res.status(400).json({ message: "Order is already cancelled" });
-      }
+    // Allowed order statuses
+    const validStatuses = [
+      "Pending",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Completed",
+      "Cancelled",
+    ];
 
-      // Update only the orderStatus field without triggering full validation
-      order.orderStatus = "Cancelled";
-      await order.save({ validateBeforeSave: false });  // ✅ Disable validation
+    if (!validStatuses.includes(newStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order status provided!",
+      });
+    }
 
-      res.json({ message: "Order cancelled successfully", order });
+    // Find the order
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found!",
+      });
+    }
+
+    // Prevent cancellation of completed or already cancelled orders
+    if (["Completed", "Delivered", "Cancelled"].includes(order.orderStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: `Order cannot be updated to ${newStatus} as it is already marked as '${order.orderStatus}'.`,
+      });
+    }
+
+    // Update order status and push to status history
+    order.orderStatus = newStatus;
+    order.statusHistory.push({ status: newStatus, updatedAt: new Date() });
+
+    await order.save();
+
+    // Send email notification (Ensure this function exists)
+    sendOrderStatusEmail(order.email, orderId, newStatus);
+
+    return res.status(200).json({
+      success: true,
+      message: `Order status updated to '${newStatus}' successfully!`,
+      order,
+    });
   } catch (error) {
-      console.error("Error cancelling order:", error);
-      res.status(500).json({ message: "Internal server error" });
+    console.error("Error updating order status:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error. Please try again later.",
+      error: error.message,
+    });
   }
 };
-
