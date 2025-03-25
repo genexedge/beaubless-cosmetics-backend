@@ -17,7 +17,7 @@ const orderSchema = new mongoose.Schema(
       city: { type: String, required: true },
       state: { type: String, required: true },
       street: { type: String, required: true },
-      postalCode: { type: String, required: true },
+      pincode: { type: String, required: true },
     },
 
     cartProducts: [

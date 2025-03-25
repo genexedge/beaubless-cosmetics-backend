@@ -34,6 +34,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v1.0.9  | Single product api                                 | Sunil   |
 | v2.0.0  | Some Changes to Match Frontend                     | Sunil   |
 | v2.0.1  | Payment Controller Phonepe                         | Sunil   |
+| v2.0.1  | Order Controller Changed                           | Sunil   |
 
 ## Installation
 

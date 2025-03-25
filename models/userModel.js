@@ -13,9 +13,14 @@ const addressSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
+    firstName: {
       type: String,
       required: true,
+      trim: true,
+    },
+     lastName: {
+      type: String,
+      required: false,
       trim: true,
     },
     email: {
@@ -34,7 +39,6 @@ const userSchema = new mongoose.Schema(
     addresses: [addressSchema],  // Now supports multiple addresses
     answer: {
       type: String,
-      required: true,
     },
     role: {
       type: Number,

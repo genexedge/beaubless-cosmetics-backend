@@ -8,14 +8,14 @@ import crypto from "crypto";
 
 export const registerController = async (req, res) => {
   try {
-    const { name, email, password, phone, address, role, answer } = req.body;
+    const { firstName,lastName, email, password, phone, address, role, answer } = req.body;
 
     // Validation
-    if (!name) return res.status(400).send({ message: "Name is required" });
+    if (!firstName) return res.status(400).send({ message: "First Name is required" });
     if (!email) return res.status(400).send({ message: "Email is required" });
     if (!password) return res.status(400).send({ message: "Password is required" });
     if (!phone) return res.status(400).send({ message: "Phone is required" });
-    if (!answer) return res.status(400).send({ message: "Security answer is required" });
+    // if (!answer) return res.status(400).send({ message: "Security answer is required" });
 
     if (!address || typeof address !== "object") {
       return res.status(400).send({ message: "Valid address is required" });
@@ -43,7 +43,8 @@ export const registerController = async (req, res) => {
 
     // Save user
     const user = new User({
-      name,
+      firstName,
+      lastName,
       email,
       phone,
       password: hashedPassword,
@@ -56,7 +57,6 @@ export const registerController = async (req, res) => {
         pincode,
       },
       role: role || 0, // Default to 'User' if not provided
-      answer,
     });
 
     await user.save();
@@ -115,7 +115,7 @@ export const loginController = async (req, res) => {
       message: "Login successfully",
       user: {
         _id: user._id,
-        name: user.name,
+        firstName: user.firstName,
         email: user.email,
         phone: user.phone,
         address: user.addresses,
@@ -195,7 +195,7 @@ export const forgotPasswordController = async (req, res) => {
 //update profile
 export const updateProfileController = async (req, res) => {
   try {
-    const { name, email, password, address, phone } = req.body;
+    const { firstName,lastName, email, password, address, phone } = req.body;
     const user = await User.findOne({ email });
 
     //password
@@ -211,7 +211,8 @@ export const updateProfileController = async (req, res) => {
     const updateUser = await User.findOneAndUpdate(
       user._id,
       {
-        name: name || user.name,
+        firstName: firstName || user.firstName,
+        lastName: lastName || user.lastName,
         password: hashedPassword || user.password,
         address: address || user.address,
         phone: phone || user.phone,

@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.post("/checkout", createOrderController);
 router.post("/pay", createOrderTwoController);
-router.post("/verify-payment", verifyPaymentController);
+router.get("/verify-payment", verifyPaymentController);
 router.get('/get-all-order', getAllOrder);
 router.put('/update-status', updateOrderStatus);
 
