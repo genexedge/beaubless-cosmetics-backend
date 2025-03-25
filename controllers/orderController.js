@@ -19,7 +19,6 @@ export const getAllOrder = async (req, res) => {
 
 export const createOrderController = async (req, res) => {
   try {
-    console.log("Called");
     const {
       email,
       firstName,
