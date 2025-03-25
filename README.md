@@ -29,25 +29,16 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v1.0.1  | Changed Product System                             | Sunil   |
 | v1.0.2  | Changed Product System                             | Sunil   |
 
-<<<<<<< HEAD
 | v1.0.4 | order Status API,product API,user Address API | Rishabh |
 | v1.0.5 | Update API | Rishabh |
 | v1.0.6 | Update API v0.0.6 | Rishabh |
-=======
-| v1.0.4 | order Status API,product API,user Address API | Rishabh |
-| v1.0.5 | Corrected Cart and API System | Sunil |
-| v1.0.5 | Corrected Cart and API System | Sunil |
 | v1.0.9 | Single product api | Sunil |
 | v2.0.0 | Some Changes to Match Frontend | Sunil |
 | v2.0.1 | Payment Controller Phonepe | Sunil |
-<<<<<<< HEAD
-| v2.0.1 | Order Controller Changed | Sunil |
 | v2.0.2 | Rishabh final push | Rishabh|
 | v2.0.3 | Merge with Rishabh's code | Sunil|
-=======
 
-> > > > > > > d994b5b820302f36000707c188a58c0f8bfe5e7a
-> > > > > > > 7564fcbe25d26e2fce295643c4549a62f74eaa67
+=======
 
 ## Installation
 
