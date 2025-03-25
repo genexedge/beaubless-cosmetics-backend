@@ -77,6 +77,36 @@ export const registerController = async (req, res) => {
   }
 };
 
+export const deleteUserController = async (req, res) => {
+  try {
+    const { userId } = req.params; // Get user ID from request parameters
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Delete user
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).send({
+      success: true,
+      message: "User deleted successfully",
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({
+      success: false,
+      message: "Error deleting user",
+      error,
+    });
+  }
+};
 
 //login
 export const loginController = async (req, res) => {

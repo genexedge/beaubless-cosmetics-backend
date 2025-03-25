@@ -276,4 +276,3 @@ export const removeFromCartController = async (req, res) => {
     });
   }
 };
-

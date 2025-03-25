@@ -139,13 +139,25 @@ export const getAllProductController = async (req, res) => {
 // Route to get single product by slug
 export const getSingleProductController = async (req, res) => {
   try {
+    console.log(req.params);
+    
     const { slug } = req.params;
 
-    // Fetch product with reviews populated by slug
-    const product = await Product.findOne({ slug }).populate("reviews");
+    if (!slug) {
+      return res.status(400).json({
+        success: false,
+        message: "Product slug is required",
+      });
+    }
+
+    // Ensure we're querying by slug, not _id
+    const product = await Product.findOne({ slug: slug }).populate("reviews");
 
     if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
     }
 
     // Calculate total number of reviews
@@ -155,7 +167,6 @@ export const getSingleProductController = async (req, res) => {
     const totalRating = product.reviews.reduce((sum, review) => sum + review.rating, 0);
     const averageRating = reviewCount > 0 ? (totalRating / reviewCount).toFixed(1) : 0;
 
-    // Send success response with all necessary details
     res.status(200).json({
       success: true,
       message: "Product fetched successfully",
@@ -164,7 +175,7 @@ export const getSingleProductController = async (req, res) => {
       averageRating,
     });
   } catch (error) {
-    // Handle errors and send failure response
+    console.error("Error fetching product:", error);
     res.status(500).json({
       success: false,
       message: "Error in fetching product",
@@ -172,6 +183,7 @@ export const getSingleProductController = async (req, res) => {
     });
   }
 };
+
 
 
 

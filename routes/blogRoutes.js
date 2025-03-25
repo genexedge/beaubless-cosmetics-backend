@@ -24,10 +24,10 @@ router.get('/get-all-blogs', getAllBlogs);
 router.get('/:slug', getBlogBySlug);
 
 // Update Blog
-router.put('/update/:slug', updateBlog);
+router.put('/update/:id', updateBlog);
 
 // Delete Blog
-router.delete('/delete/:slug', deleteBlog);
+router.delete('/delete/:id', deleteBlog);
 
 // Add Comment
 router.post('/:slug/comment', addComment);

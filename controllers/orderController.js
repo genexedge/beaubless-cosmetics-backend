@@ -5,11 +5,6 @@ import crypto from "crypto";
 import userModel from "../models/userModel.js";
 import cartModel from "../models/cartModel.js";
 import { sendOrderStatusEmail } from "../controllers/emailController.js";
-import {
-  StandardCheckoutClient,
-  StandardCheckoutPayRequest,
-  Env,
-} from "pg-sdk-node";
 
 export const getAllOrder = async (req, res) => {
   try {
@@ -19,71 +14,12 @@ export const getAllOrder = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch orders", error });
   }
 };
-
-export const getOrderById = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    console.log("Fetching order ID:", orderId);
-
-    // Fetching order from MongoDB
-    const order = await Order.findById(orderId);
-
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    res.status(200).json(order);
-  } catch (error) {
-    console.error("Error fetching order:", error.message);
-    res
-      .status(500)
-      .json({ message: "Failed to fetch order details", error: error.message });
-  }
-};
-
 //controller for creating order
 //controller for creating order
-
-const clientId = "SU2503141233473872083112";
-const clientSecret = "b9d56a4b-23e1-4b91-a7a2-cdab25111fc5";
-const clientVersion = 1;
-const env = Env.PRODUCTION;
-const client = StandardCheckoutClient.getInstance(
-  clientId,
-  clientSecret,
-  clientVersion,
-  env
-);
-
-const initiatePhonePePayment = async (finalTotalPrice, email) => {
-  console.log(finalTotalPrice);
-  console.log(email);
-  try {
-    const merchantOrderId = "TXN" + Date.now();
-    const redirectUrl = `${process.env.FRONTEND_URL}/order-success`;
-
-    const request = StandardCheckoutPayRequest.builder()
-      .merchantOrderId(merchantOrderId)
-      .amount(finalTotalPrice * 100) // Convert amount to paise
-      .redirectUrl(redirectUrl)
-      .build();
-
-    const response = await client.pay(request);
-    console.log(response);
-
-    return {
-      success: true,
-      paymentUrl: response.redirectUrl,
-      merchantTransactionId: merchantOrderId,
-    };
-  } catch (error) {
-    console.error("PhonePe Payment Error:", error);
-    return { success: false, message: "Payment initiation failed" };
-  }
-};
 
 export const createOrderController = async (req, res) => {
   try {
+    console.log("Called");
     const {
       email,
       firstName,
@@ -178,34 +114,14 @@ export const createOrderController = async (req, res) => {
     for (let item of cartProducts) {
       const productId = item._id;
       const quantity = item.quantity;
-      const isVariantProduct = item.productType === "variant";
-      let price;
-      if (isVariantProduct && item.variants?.length > 0) {
-        // Find the selected variant based on activeSize
-        const selectedVariant = item.variants.find(
-          (variant) => variant.variantId.toString() === item.activeSize?.toString()
-        );
-
-        price = selectedVariant
-          ? selectedVariant.offerPrice ||
-            selectedVariant.finalPrice ||
-            selectedVariant.price ||
-            0
-          : item.offerPrice || item.finalPrice || item.price || 0;
-      } else {
-        // If it's a single product (not a variant)
-        price = item.offerPrice || item.finalPrice || item.price || 0;
-      }
-
+      let price = item.offerPrice || item.finalPrice;
       // Validate backend cart (if logged in)
       if (!isGuestOrder) {
         if (!backendCartMap.has(productId)) {
           return res.status(400).json({ message: "Cart mismatch detected" });
         }
         if (backendCartMap.get(productId).quantity !== quantity) {
-          return res
-            .status(400)
-            .json({ message: "Cart quantity mismatch detected" });
+          return res.status(400).json({ message: "Cart quantity mismatch detected" });
         }
         if (backendCartMap.get(productId).price !== price) {
           return res.status(400).json({ message: "Price mismatch detected" });
@@ -217,11 +133,7 @@ export const createOrderController = async (req, res) => {
     }
 
     // Apply coupon discount
-    if (
-      activeCoupon &&
-      activeCoupon.discountType &&
-      activeCoupon.discountValue
-    ) {
+    if (activeCoupon) {
       if (activeCoupon.discountType === "flat") {
         discountAmount = activeCoupon.discountValue;
       } else if (activeCoupon.discountType === "percentage") {
@@ -238,11 +150,12 @@ export const createOrderController = async (req, res) => {
     if (selectedShippingOption) {
       finalTotalPrice += selectedShippingOption.charges;
     }
-
-    // if (parseFloat(finalTotalPrice).toFixed(2) !== parseFloat(totalPrice).toFixed(2)) {
-    //   return res.status(400).json({ message: "Total price mismatch detected" });
-    // }
-    console.log("called here.......................");
+    if (
+      parseFloat(finalTotalPrice).toFixed(2) !==
+      parseFloat(totalPrice).toFixed(2)
+    ) {
+      return res.status(400).json({ message: "Total price mismatch detected" });
+    }
 
     // Create order object
     const newOrder = new Order({
@@ -267,19 +180,53 @@ export const createOrderController = async (req, res) => {
     await newOrder.save();
     if (paymentMethod === "COD") {
       newOrder.paymentStatus = "Pending";
+      newOrder.orderId = "";
       await newOrder.save();
-      if (userId) {
-        await cartModel.deleteOne({ userId });
-      }
+      await cartModel.deleteOne({ email });
       return res
         .status(201)
         .json({ success: true, message: "Order placed successfully" });
     } else if (paymentMethod === "PhonePe") {
-      // Call the function to initiate PhonePe payment
-      const paymentResponse = await initiatePhonePePayment(totalPrice, email);
+      // Process PhonePe Payment
+      const merchantTransactionId = "TXN" + Date.now();
+      const requestPayload = {
+        merchantId: process.env.PHONEPE_MERCHANT_ID,
+        merchantTransactionId,
+        merchantUserId: email,
+        amount: finalTotalPrice * 100, // Convert to paise
+        redirectUrl: `${process.env.FRONTEND_URL}/order-success`,
+        redirectMode: "REDIRECT",
+        callbackUrl: `${process.env.BACKEND_URL}/api/v1/order/verify-payment`,
+        paymentInstrument: { type: "PAY_PAGE" },
+      };
 
-      if (paymentResponse.success) {
-        newOrder.phonepeTransactionId = paymentResponse.merchantTransactionId;
+      // Convert payload to Base64
+      const base64Payload = Buffer.from(
+        JSON.stringify(requestPayload)
+      ).toString("base64");
+
+      // Compute X-VERIFY
+      const checksumString =
+        base64Payload + "/pg/v1/pay" + process.env.PHONEPE_SALT_KEY;
+      const xVerify =
+        crypto.createHash("sha256").update(checksumString).digest("hex") +
+        "###" +
+        process.env.PHONEPE_SALT_INDEX;
+
+      // Send request to PhonePe API
+      const response = await axios.post(
+        `${process.env.PHONEPE_BASE_URL}/pg/v1/pay`,
+        { request: base64Payload },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "X-VERIFY": xVerify,
+          },
+        }
+      );
+
+      if (response?.data?.success) {
+        newOrder.phonepeTransactionId = merchantTransactionId;
         newOrder.paymentStatus = "Pending";
         await newOrder.save();
         await cartModel.deleteOne({ email });
@@ -294,12 +241,13 @@ export const createOrderController = async (req, res) => {
       }
     }
   } catch (error) {
-    console.error("Error placing order:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to place order", error: error.message });
+    console.error("Checkout Error:", error.message);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+
+
 
 //controller for verifying payment
 
@@ -376,27 +324,16 @@ export const updateOrderStatus = async (req, res) => {
     const { orderId, newStatus } = req.body;
 
     // Validate newStatus
-    const validStatuses = [
-      "Pending",
-      "Processing",
-      "Shipped",
-      "Delivered",
-      "Completed",
-      "Cancelled",
-    ];
+    const validStatuses = ["Pending", "Processing", "Shipped", "Delivered", "Completed", "Cancelled"];
     if (!validStatuses.includes(newStatus)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid order status!" });
+      return res.status(400).json({ success: false, message: "Invalid order status!" });
     }
 
     // Find the order
     const order = await Order.findById(orderId);
 
     if (!order) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Order not found!" });
+      return res.status(404).json({ success: false, message: "Order not found!" });
     }
 
     // Update order status and push to statusHistory
@@ -404,12 +341,10 @@ export const updateOrderStatus = async (req, res) => {
     order.statusHistory.push({ status: newStatus, updatedAt: new Date() });
 
     await order.save();
-    // Send email notification
-    sendOrderStatusEmail(order.email, orderId, newStatus);
+     // Send email notification
+     sendOrderStatusEmail(order.email, orderId, newStatus);
 
-    res
-      .status(200)
-      .json({ success: true, message: "Order status updated!", order });
+    res.status(200).json({ success: true, message: "Order status updated!", order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -439,5 +374,33 @@ export const cancelOrder = async (req, res) => {
   } catch (error) {
     console.error("Error cancelling order:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+export const cancelOrder = async (req, res) => {
+  try {
+      const orderId = req.params.orderId;
+      console.log(`Cancelling order with ID: ${orderId}`);
+
+      // Find the order in the database
+      const order = await Order.findById(orderId);
+      if (!order) {
+          return res.status(404).json({ message: "Order not found" });
+      }
+
+      // Check if the order is already cancelled
+      if (order.orderStatus === "Cancelled") {
+          return res.status(400).json({ message: "Order is already cancelled" });
+      }
+
+      // Update only the orderStatus field without triggering full validation
+      order.orderStatus = "Cancelled";
+      await order.save({ validateBeforeSave: false });  // ✅ Disable validation
+
+      res.json({ message: "Order cancelled successfully", order });
+  } catch (error) {
+      console.error("Error cancelling order:", error);
+      res.status(500).json({ message: "Internal server error" });
   }
 };

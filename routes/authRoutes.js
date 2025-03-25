@@ -14,7 +14,7 @@ import {
   registerController,
   testController,
   updateProfileController,
-  addAddress, updateAddress, deleteAddress, setDefaultAddress
+  addAddress, updateAddress, deleteAddress, setDefaultAddress,deleteUserController
 } from "../controllers/authController.js";
 import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
 
@@ -25,7 +25,7 @@ const router = express.Router();
 //routing
 //REGISTER || METHOD POST
 router.post("/register", registerController);
-
+router.delete("/delete/:userId", deleteUserController);
 //LOGIN || POST
 router.post("/login", loginController);
 

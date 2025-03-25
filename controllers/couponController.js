@@ -1,25 +1,47 @@
 import Coupon from "../models/couponModel.js";
 
 // ✅ Create a new coupon
+
 export const createCoupon = async (req, res) => {
-    try {
-      const { code } = req.body;
-  
-      // Check if the coupon code already exists
-      const existingCoupon = await Coupon.findOne({ code });
-      if (existingCoupon) {
-        return res.status(400).json({ success: false, message: "Coupon code already exists!" });
-      }
-  
-      // Create and save the new coupon
-      const coupon = new Coupon(req.body);
-      await coupon.save();
-  
-      res.status(201).json({ success: true, message: "Coupon created successfully!", coupon });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+  try {
+    const { code, pid, cid, startDate, expireDate, discountValue, minOrderValue, maxDiscount, maxUsage, isActive, ...otherFields } = req.body;
+
+    // Check if the coupon code already exists
+    const existingCoupon = await Coupon.findOne({ code });
+    if (existingCoupon) {
+      return res.status(400).json({ success: false, message: "Coupon code already exists!" });
     }
-  };
+
+    // Ensure startDate is before expireDate
+    if (new Date(startDate) >= new Date(expireDate)) {
+      return res.status(400).json({ success: false, message: "Expire date must be after start date." });
+    }
+
+    // Convert fields to proper types
+    const newCoupon = new Coupon({
+      ...otherFields,
+      code: code.toUpperCase().trim(), // Ensure uppercase code
+      startDate: new Date(startDate),
+      expireDate: new Date(expireDate),
+      discountValue: Number(discountValue),
+      minOrderValue: Number(minOrderValue),
+      maxDiscount: Number(maxDiscount),
+      maxUsage: Number(maxUsage),
+      isActive: isActive === "true" || isActive === true, // Convert to boolean
+      pid: pid && pid !== "" ? pid : undefined, // Avoid BSONError
+      cid: cid && cid !== "" ? cid : undefined, // Avoid BSONError
+    });
+
+    // Save coupon to database
+    await newCoupon.save();
+    res.status(201).json({ success: true, message: "Coupon created successfully!", coupon: newCoupon });
+
+  } catch (error) {
+    console.error("Error creating coupon:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
   
 
 // ✅ Get all coupons
