@@ -162,6 +162,7 @@ export const getCartController = async (req, res) => {
           : 0;
 
         return {
+          productId:product._id,
           _id: product._id,
           name: product.name,
           slug: product.slug || "unknown-product",

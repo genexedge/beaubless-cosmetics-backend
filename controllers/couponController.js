@@ -1,4 +1,5 @@
 import Coupon from "../models/couponModel.js";
+import ShippingOption from "../models/shippingModel.js";
 
 // ✅ Create a new coupon
 
@@ -126,4 +127,75 @@ export const applyCoupon = async (req, res) => {
       res.status(500).json({ success: false, message: error.message });
     }
   };
+
+
+
+// -------------------Shipping------------------------------
+
+// Get all shipping options
+export const getAllShippingOptions = async (req, res) => {
+  try {
+    const shippingOptions = await ShippingOption.find();
+    res.status(200).json({ success: true, data: shippingOptions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal Server Error", error });
+  }
+};
+
+// Get a single shipping option by ID
+export const getShippingById = async (req, res) => {
+  try {
+    const shipping = await ShippingOption.findById(req.params.id);
+    if (!shipping) {
+      return res.status(404).json({ success: false, message: "Shipping option not found" });
+    }
+    res.status(200).json({ success: true, data: shipping });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Internal Server Error", error });
+  }
+};
+
+// Create a new shipping option
+export const createShipping = async (req, res) => {
+  try {
+    const { type, charges, name } = req.body;
+    const newShipping = new ShippingOption({ type, charges, name });
+    await newShipping.save();
+    res.status(201).json({ success: true, data: newShipping });
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Error creating shipping option", error });
+  }
+};
+
+// Update an existing shipping option
+export const updateShipping = async (req, res) => {
+  try {
+    const updatedShipping = await ShippingOption.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedShipping) {
+      return res.status(404).json({ success: false, message: "ShippingOption option not found" });
+    }
+
+    res.status(200).json({ success: true, data: updatedShipping });
+  } catch (error) {
+    res.status(400).json({ success: false, message: "Error updating shipping option", error });
+  }
+};
+
+// Delete a shipping option
+export const deleteShipping = async (req, res) => {
+  try {
+    const deletedShipping = await ShippingOption.findByIdAndDelete(req.params.id);
+    if (!deletedShipping) {
+      return res.status(404).json({ success: false, message: "ShippingOption option not found" });
+    }
+    res.status(200).json({ success: true, message: "Shipping option deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error deleting shipping option", error });
+  }
+};
+
   

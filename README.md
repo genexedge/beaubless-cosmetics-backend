@@ -37,6 +37,8 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v2.0.1 | Payment Controller Phonepe | Sunil |
 | v2.0.2 | Rishabh final push | Rishabh|
 | v2.0.3 | Merge with Rishabh's code | Sunil|
+| v2.0.4 | Cart System | Sunil|
+| v2.0.5 | Cart System and Order System | Sunil|
 
 =======
 
