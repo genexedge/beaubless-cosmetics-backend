@@ -45,6 +45,6 @@ router.delete("/review/:productId/:reviewId", deleteReview); // Delete a review
 router.post("/helpful/:reviewId", markReviewHelpful); // Mark a review as helpful
 
 router.post('/:productId/variant', addVariant);
-router.put("/:productid/variant/:variantid", updateVariant);
+router.put("/:productId/variant/:variantId", updateVariant);
 router.delete("/:productId/variant/:variantId", deleteVariant);
 export default router;
