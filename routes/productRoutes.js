@@ -8,7 +8,7 @@ import {
     insertManyProductsController,
     updateProductController,
     getAllCategoriesController,
-    createCategoryController,deleteCategoryController
+    createCategoryController,deleteCategoryController,addVariant,deleteVariant,updateVariant
 
 } from "../controllers/productController.js";
 import upload from "../middlewares/multerConfig.js";
@@ -44,4 +44,7 @@ router.put("/review/:reviewId", updateReview); // Update a review
 router.delete("/review/:productId/:reviewId", deleteReview); // Delete a review
 router.post("/helpful/:reviewId", markReviewHelpful); // Mark a review as helpful
 
+router.post('/:productId/variant', addVariant);
+router.put("/:productid/variant/:variantid", updateVariant);
+router.delete("/:productId/variant/:variantId", deleteVariant);
 export default router;

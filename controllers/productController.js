@@ -490,3 +490,86 @@ console.log(pid);
   }
 };
 
+export const addVariant = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { size, inventory, offerprice, finalprice } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+
+    const newVariant = {
+      size,
+      inventory: Number(inventory),
+      offerprice: Number(offerprice),
+      finalprice: Number(finalprice)
+    };
+
+    product.variants.push(newVariant);
+    await product.save();
+
+    return res.status(200).json({ success: true, message: "Variant added successfully" });
+
+  } catch (error) {
+    console.error("Error adding variant:", error.message);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+export const updateVariant = async (req, res) => {
+  try {
+    const { productid, variantid } = req.params;
+    const { size, inventory, offerprice, finalprice } = req.body;
+
+    const product = await Product.findById(productid);
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+
+    const variant = product.variants.id(variantid);
+    if (!variant) return res.status(404).json({ success: false, message: "Variant not found" });
+
+    // Update fields
+    if (size) variant.size = size;
+    if (inventory) variant.inventory = Number(inventory);
+    if (offerprice) variant.offerprice = Number(offerprice);
+    if (finalprice) variant.finalprice = Number(finalprice);
+
+    await product.save();
+
+    res.status(200).json({ success: true, message: "Variant updated successfully" });
+  } catch (error) {
+    console.error("Error updating variant:", error.message);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+export const deleteVariant = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+console.log(req.params);
+
+    const product = await Product.findOne({ _id: productId });
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    // Check if variant exists
+    const variantExists = product.variants.some(
+      (v) => v._id.toString() === variantId
+    );
+    if (!variantExists) {
+      return res.status(404).json({ success: false, message: "Variant not found" });
+    }
+
+    // Remove variant by filtering
+    product.variants = product.variants.filter(
+      (v) => v._id.toString() !== variantId
+    );
+
+    await product.save();
+
+    return res.status(200).json({ success: true, message: "Variant deleted successfully" });
+
+  } catch (error) {
+    console.error("Error deleting variant:", error.message);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+

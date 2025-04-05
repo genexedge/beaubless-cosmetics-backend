@@ -41,7 +41,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v2.0.5 | Cart System and Order System | Sunil|
 | v2.0.6 | user admin System | rishabh |
 | v2.0.7 | API Delete Reviews | rishabh |
-
+| v2.0.8 | Variant API CRUD | rishabh |
 =======
 
 ## Installation
