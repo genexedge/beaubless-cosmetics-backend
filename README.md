@@ -39,6 +39,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v2.0.3 | Merge with Rishabh's code | Sunil|
 | v2.0.4 | Cart System | Sunil|
 | v2.0.5 | Cart System and Order System | Sunil|
+| v2.0.6 | user admin System | rishabh |
 
 =======
 

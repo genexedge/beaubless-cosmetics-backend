@@ -50,11 +50,6 @@ export const createReview = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
-
-
-
-
 // ✅ 2️⃣ Get all reviews for a specific product
 export const getReviewsByProduct = async (req, res) => {
   try {
