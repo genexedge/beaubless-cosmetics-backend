@@ -41,7 +41,7 @@ router.delete("/delete-category/:pid", deleteCategoryController);
 router.post("/createreview", createReview); // Create a new review
 router.get("/review/:productId", getReviewsByProduct); // Get all reviews for a product
 router.put("/review/:reviewId", updateReview); // Update a review
-router.delete("/review/:reviewId", deleteReview); // Delete a review
+router.delete("/review/:productId/:reviewId", deleteReview); // Delete a review
 router.post("/helpful/:reviewId", markReviewHelpful); // Mark a review as helpful
 
 export default router;

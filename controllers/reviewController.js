@@ -95,28 +95,31 @@ export const updateReview = async (req, res) => {
 };
 
 // ✅ 4️⃣ Delete a review (Only by the user who wrote it)
+
 export const deleteReview = async (req, res) => {
   try {
-    const { reviewId } = req.params;
-    const { uid } = req.body;
+    const { productId, reviewId } = req.params;
 
-    const productData = await Product.findOne({ "reviews._id": reviewId });
-    if (!productData) return res.status(404).json({ error: "Review not found" });
+    // 1. Find the product
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ error: "Product not found" });
 
-    const review = productData.reviews.id(reviewId);
+    // 2. Check if review exists
+    const review = product.reviews.id(reviewId);
+    if (!review) return res.status(404).json({ error: "Review not found" });
 
-    if (review.uid !== uid) {
-      return res.status(403).json({ error: "Unauthorized: You can only delete your own review" });
-    }
+    // 3. Remove review
+    product.reviews.pull(reviewId);
+    await product.save();
 
-    review.remove();
-    await productData.save();
-
-    return res.status(200).json({ message: "Review deleted successfully!" });
+    return res.status(200).json({ success:true,message: "Review deleted successfully!" });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Delete review error:", error);
+    return res.status(500).json({ success:false,error: error.message });
   }
 };
+
+
 
 // ✅ 5️⃣ Mark a review as helpful
 export const markReviewHelpful = async (req, res) => {
