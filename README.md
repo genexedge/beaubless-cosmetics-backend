@@ -42,6 +42,8 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v2.0.6 | user admin System | rishabh |
 | v2.0.7 | API Delete Reviews | rishabh |
 | v2.0.8 | Variant API CRUD | rishabh |
+| v2.0.9 | Variant Fixed CRUD | rishabh |
+| v2.1.0 | Email Issue fixed and Invertory reduce fixed CRUD | rishabh |
 =======
 
 ## Installation

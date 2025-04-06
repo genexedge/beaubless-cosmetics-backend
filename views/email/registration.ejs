@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Welcome to Beaubless!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f5f1ff;
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      color: #3d3d3d;
+    }
+    .email-wrapper {
+      max-width: 640px;
+      margin: auto;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0,0,0,0.05);
+    }
+    .email-header {
+      background: linear-gradient(to right, #d1bff1, #b8b3ed);
+      padding: 40px 30px;
+      text-align: center;
+      color: #fff;
+    }
+    .email-header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .email-header p {
+      font-size: 15px;
+      margin-top: 8px;
+    }
+    .section {
+      padding: 30px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .section-title {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #7e64d3;
+    }
+    .info-row p {
+      margin: 6px 0;
+      font-size: 15px;
+    }
+    .cta-btn {
+      display: inline-block;
+      margin: 25px 0 0;
+      padding: 12px 24px;
+      background-color: #7e64d3;
+      color: #fff;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 15px;
+    }
+    .footer {
+      background-color: #f2effa;
+      padding: 20px 30px;
+      text-align: center;
+      font-size: 13px;
+      color: #999;
+    }
+    .footer a {
+      color: #7e64d3;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-header">
+      <h1>Welcome, <%= user.firstName %>! 🎉</h1>
+      <p>You're now part of the Beaubless family.</p>
+    </div>
+
+    <div class="section">
+      <div class="section-title">👤 Account Details</div>
+      <div class="info-row">
+        <p><strong>Name:</strong> <%= user.firstName %> <%= user.lastName %></p>
+        <p><strong>Email:</strong> <%= user.email %></p>
+        <p><strong>Phone:</strong> <%= user.phone %></p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📍 Shipping Address</div>
+      <div class="info-row">
+        <% if (user.address) { %>
+          <p><strong>Address:</strong> <%= user.address.houseNo || '' %>, <%= user.address.street || '' %></p>
+          <p><%= user.address.city || '' %>, <%= user.address.state || '' %> - <%= user.address.pincode || '' %></p>
+          <p><%= user.address.country || '' %></p>
+        <% } else { %>
+          <p>Address not available.</p>
+        <% } %>
+      </div>
+      <div style="text-align:center;">
+        <a href="https://www.beaubless.com/login" class="cta-btn">Login Now</a>
+      </div>
+    </div>
+
+    <div class="footer">
+      Got questions? Email us at <a href="mailto:care@beaubless.in">care@beaubless.in</a><br/>
+      We’re so happy to have you here! 💜
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Order Status Update</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f5f1ff;
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      color: #3d3d3d;
+    }
+    .email-wrapper {
+      max-width: 640px;
+      margin: auto;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0,0,0,0.05);
+    }
+    .email-header {
+      background: linear-gradient(to right, #d1bff1, #b8b3ed);
+      padding: 40px 30px;
+      text-align: center;
+      color: #fff;
+    }
+    .email-header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .email-header p {
+      font-size: 15px;
+      margin-top: 8px;
+    }
+    .section {
+      padding: 30px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .section-title {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #7e64d3;
+    }
+    .info-row p {
+      margin: 6px 0;
+      font-size: 15px;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background-color: #d1bff1;
+      color: #4a3b83;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 14px;
+      margin: 10px 0 20px;
+    }
+    .product-card {
+      background: #f4f1fc;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 15px;
+    }
+    .product-card h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .product-card .detail {
+      font-size: 14px;
+      color: #555;
+      margin-top: 6px;
+    }
+    .total {
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+    .cta-btn {
+      display: inline-block;
+      margin: 25px 0 0;
+      padding: 12px 24px;
+      background-color: #7e64d3;
+      color: #fff;
+      border-radius: 30px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 15px;
+    }
+    .footer {
+      background-color: #f2effa;
+      padding: 20px 30px;
+      text-align: center;
+      font-size: 13px;
+      color: #999;
+    }
+    .footer a {
+      color: #7e64d3;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-header">
+      <h1>Hi <%= data.firstName %>, Your Order Status Updated!</h1>
+      <p>We’ve got some fresh updates for your Beaubless order 💜</p>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📦 Order Status</div>
+      <p>Your order <strong>#<%= orderId %></strong> is now:</p>
+      <div class="status-badge"><%= newStatus %></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Order Summary</div>
+      <div class="info-row">
+        <p><strong>Name:</strong> <%= data.firstName %> <%= data.lastName %></p>
+        <p><strong>Phone:</strong> <%= data.phone %></p>
+        <p><strong>Shipping:</strong> <%= data.selectedShippingOption?.label || 'Standard Shipping' %></p>
+        <p><strong>Payment:</strong> <%= data.paymentMethod %></p>
+        <p><strong>Note:</strong> <%= data.note || 'No notes' %></p>
+        <p><strong>Total:</strong> ₹<%= data.totalPrice %></p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Items</div>
+      <% data.cartProducts.forEach((item) => { %>
+        <div class="product-card">
+          <h3><%= item.name %></h3>
+          <div class="detail">
+            Quantity: <%= item.quantity %><br>
+            Price: ₹<%= item.price %>
+          </div>
+        </div>
+      <% }) %>
+      <p class="total">Total Amount: ₹<%= data.totalPrice %></p>
+      <div style="text-align:center;">
+        <a href="https://www.beaubless.com/login" class="cta-btn">Track Order</a>
+      </div>
+    </div>
+
+    <div class="footer">
+      Need help? Reach out to us at <a href="mailto:care@beaubless.in">care@beaubless.in</a><br>
+      Thank you for choosing Beaubless 🌸
+    </div>
+  </div>
+</body>
+</html>

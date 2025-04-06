@@ -2,9 +2,11 @@ import Cart from "../models/cartModel.js";
 import Order from "../models/orderModel.js";
 import axios from "axios";
 import crypto from "crypto";
+import Product from "../models/productModel.js";
 import userModel from "../models/userModel.js";
 import cartModel from "../models/cartModel.js";
-import { sendOrderStatusEmail } from "../controllers/emailController.js";
+import { sendOrderStatusEmail,sendOrderPlacedMail } from "../controllers/emailController.js";
+
 import {
   StandardCheckoutClient,
   StandardCheckoutPayRequest,
@@ -266,6 +268,74 @@ export const createOrderController = async (req, res) => {
       statusHistory: [{ status: "Pending", updatedAt: new Date() }],
     });
     await newOrder.save();
+
+    let insufficientStock = null;
+
+for (let item of cartProducts) {
+  const product = await Product.findById(item.productId);
+  if (!product) continue;
+
+  // If product has variants
+  if (product.productType === "variant") {
+    const variantIndex = product.variants.findIndex(
+      (v) => v._id.toString() === item.activeSize?.toString()
+    );
+
+    if (variantIndex === -1) {
+      insufficientStock = `Variant not found for ${product.name}`;
+      break;
+    }
+
+    const variant = product.variants[variantIndex];
+    const currentStock = variant.inventory || 0;
+    const orderQty = item.quantity || 1;
+    const newStock = currentStock - orderQty;
+
+    console.log("🔍 Variant:", variant);
+    console.log("🟢 Stock before:", currentStock, "| Order:", orderQty, "| After:", newStock);
+
+    
+
+    // Store new stock temporarily
+    product.variants[variantIndex].inventory = newStock;
+  } else {
+    // Non-variant product
+    const currentStock = product.stock || 0;
+    const orderQty = item.quantity || 1;
+    const newStock = currentStock - orderQty;
+
+    if (newStock < 0) {
+      insufficientStock = `Insufficient stock for ${product.name}`;
+      break;
+    }
+
+    product.stock = newStock;
+  }
+
+  // Save after all checks
+  await product.save();
+}
+
+if (insufficientStock) {
+  return res.status(400).json({ message: insufficientStock });
+}
+
+console.log("Stock updated successfully");
+// 📨 Send Order Confirmation Email
+await sendOrderPlacedMail(email, {
+  orderId: newOrder._id,
+  customerName: `${firstName} ${lastName}`,
+  orderDate: new Date().toLocaleString(),
+  shippingAddress: address,
+  items: cartProducts,
+  totalAmount: finalTotalPrice,
+  paymentMethod: paymentMethod,
+  shippingOption: selectedShippingOption,
+  note: note || "",
+});
+
+
+    
     if (paymentMethod === "COD") {
       newOrder.paymentStatus = "Pending";
       await newOrder.save();
@@ -376,7 +446,6 @@ export const updateOrderStatus = async (req, res) => {
   try {
     const { orderId, newStatus } = req.body;
 
-    // Validate newStatus
     const validStatuses = [
       "Pending",
       "Processing",
@@ -391,7 +460,6 @@ export const updateOrderStatus = async (req, res) => {
         .json({ success: false, message: "Invalid order status!" });
     }
 
-    // Find the order
     const order = await Order.findById(orderId);
 
     if (!order) {
@@ -400,13 +468,18 @@ export const updateOrderStatus = async (req, res) => {
         .json({ success: false, message: "Order not found!" });
     }
 
-    // Update order status and push to statusHistory
     order.orderStatus = newStatus;
     order.statusHistory.push({ status: newStatus, updatedAt: new Date() });
 
     await order.save();
-    // Send email notification
-    sendOrderStatusEmail(order.email, orderId, newStatus);
+
+    // ✅ Send email with proper parameters
+    await sendOrderStatusEmail(order.email, {
+      email: order.email,
+      data: order,
+      orderId,
+      newStatus,
+    });
 
     res
       .status(200)
@@ -415,6 +488,7 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 export const cancelOrder = async (req, res) => {
   try {

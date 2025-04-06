@@ -1,18 +1,35 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import path from "path";
+import fs from "fs";
+import ejs from "ejs";
+import { fileURLToPath } from "url";
 
-dotenv.config(); // Load environment variables
+// Setup __dirname for ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+// Load environment variables
+dotenv.config();
+
+// Central FROM email format
+const FROM_EMAIL = `"${process.env.BRAND_NAME || "Your Brand"}" <${process.env.ZOHO_EMAIL}>`;
+
+// 🔧 Create Zoho SMTP transporter
 const transporter = nodemailer.createTransport({
-host: "smtppro.zoho.in",
+  host: 'smtp.zoho.in',
   port: 465,
   secure: true,
   auth: {
-    user: process.env.ZOHO_EMAIL, // Your Zoho email
-    pass: process.env.ZOHO_PASSWORD, // Your Zoho password or App Password
+      user: 'care@beaubless.com',
+      pass: 'RhpWfAQZ2vfr'
   },
+  logger:false,
+  debug: false
 });
-async function verifySMTPConnection() {
+
+// ✅ Check SMTP connection once at server start
+export async function verifySMTPConnection() {
   try {
     await transporter.verify();
     console.log("✅ SMTP Connected Successfully!");
@@ -20,22 +37,67 @@ async function verifySMTPConnection() {
     console.warn("⚠️ SMTP Warning: Connection issue detected.", error.message);
   }
 }
-// Function to send order status update email
-export const sendOrderStatusEmail = async (toEmail, orderId, newStatus) => {
-  try {
-    const mailOptions = {
-      from: process.env.ZOHO_EMAIL,
-      to: toEmail,
-      subject: `Order #${orderId} - Status Update`,
-      html: `<p>Dear Customer,</p>
-             <p>Your order <strong>#${orderId}</strong> has been updated to: <strong>${newStatus}</strong>.</p>
-             <p>Thank you for shopping with us!</p>
-             <p>Best Regards, <br/> Your Company</p>`,
-    };
 
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Order update email sent to ${toEmail}`);
+// 📦 Send Order Placed Email
+export const sendOrderPlacedMail = async (toEmail, orderData) => {
+  try {
+    const templatePath = path.join(__dirname, "../views/email/orderPlaced.ejs");
+    const template = fs.readFileSync(templatePath, "utf-8");
+    const htmlContent = ejs.render(template, { order: orderData });
+
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: toEmail,
+      subject: "🛍️ Your Order Has Been Placed!",
+      html: htmlContent,
+    });
+
+    console.log("📧 Order confirmation mail sent:", info.messageId);
   } catch (error) {
-    console.error("❌ Error sending email:", error);
+    console.error("❌ Failed to send order email:", error.message);
+  }
+};
+
+// 🚚 Send Order Status Update Email
+export const sendOrderStatusEmail = async (toEmail, data) => {
+  const { orderId, newStatus, data: order } = data;
+
+  try {
+    const templatePath = path.join(__dirname, "../views/email/orderStatus.ejs");
+    const template = fs.readFileSync(templatePath, "utf-8");
+    const htmlContent = ejs.render(template, { orderId, newStatus, data: order });
+
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: toEmail,
+      subject: `📦 Order #${orderId} - Status Update`,
+      html: htmlContent,
+    });
+
+    console.log(`✅ Order status update mail sent to ${toEmail}`);
+  } catch (error) {
+    console.error("❌ Error sending order status email:", error.message);
+  }
+};
+
+export const sendRegistrationEmail = async (toEmail, userData) => {
+  try {
+    const templatePath = path.join(__dirname, "../views/email/registration.ejs");
+    const template = fs.readFileSync(templatePath, "utf-8");
+    const htmlContent = ejs.render(template, {
+      user: userData,
+      brand: process.env.BRAND_NAME || "Your Company"
+    });
+
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: toEmail,
+      subject: "🎉 Welcome to Our Beaubless Platform!",
+      html: htmlContent,
+    });
+
+    console.log("📧 Registration email sent:", info.messageId);
+  } catch (error) {
+    console.error("❌ Failed to send registration email:", error.message);
   }
 };

@@ -3,7 +3,7 @@ import User from "../models/userModel.js";
 import JWT from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-
+import { sendRegistrationEmail } from "../controllers/emailController.js";
 
 
 export const registerController = async (req, res) => {
@@ -60,7 +60,7 @@ export const registerController = async (req, res) => {
     });
 
     await user.save();
-
+    await sendRegistrationEmail(email, user);
     res.status(201).send({
       success: true,
       message: "User registered successfully",

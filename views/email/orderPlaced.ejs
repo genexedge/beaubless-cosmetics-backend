@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Beaubless - Order Placed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+        margin: 0;
+        padding: 0;
+        background: #ede9fb; 
+        font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+        color: #3d3d3d;
+      }
+      .email-wrapper {
+        max-width: 640px;
+        margin: auto;
+        background: #fff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 0 30px rgba(0,0,0,0.05);
+      }
+      .email-header {
+        background: linear-gradient(to right, #d1bff1, #b8b3ed);
+        padding: 40px 30px;
+        text-align: center;
+        color: #fff;
+      }
+      .email-header h1 {
+        margin: 0;
+        font-size: 26px;
+        letter-spacing: 1px;
+      }
+      .email-header p {
+        font-size: 15px;
+        margin-top: 8px;
+      }
+    
+      .section {
+        padding: 30px;
+        border-bottom: 1px solid #f0f0f0;
+      }
+    
+      .section-title {
+        font-weight: bold;
+        font-size: 18px;
+        margin-bottom: 12px;
+        color: #b8b3ed;
+      }
+    
+      .info-row p {
+        margin: 6px 0;
+        font-size: 15px;
+      }
+    
+      .product-card {
+        background: #d1bff1;
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 15px;
+      }
+    
+      .product-card h3 {
+        margin: 0;
+        font-size: 16px;
+        color: #333;
+      }
+    
+      .product-card .detail {
+        font-size: 14px;
+        color: #555;
+        margin-top: 6px;
+      }
+    
+      .total {
+        font-size: 16px;
+        font-weight: bold;
+        margin-top: 15px;
+      }
+    
+      .cta-btn {
+        display: inline-block;
+        margin: 25px 0 0;
+        padding: 12px 24px;
+        background-color: #b8b3ed;
+        color: #fff;
+        border-radius: 30px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 15px;
+      }
+    
+      .footer {
+        background-color: #d1bff1;
+        padding: 20px 30px;
+        text-align: center;
+        font-size: 13px;
+        color: #fff;
+      }
+    
+      .footer a {
+        color: #b8b3ed;
+        text-decoration: none; 
+      }
+    
+      @media (max-width: 480px) {
+        .email-header h1 {
+          font-size: 22px;
+        }
+        .section, .footer {
+          padding: 20px;
+        }
+      }
+    </style>
+</head>
+<body>
+
+  <div class="email-wrapper">
+    <div class="email-header">
+      <h1>Thank You for Your Order, <%= order.customerName %>!</h1>
+      <p>Your Beaubless journey has just begun 🌸</p>
+    </div>
+  
+    <div class="section">
+      <div class="section-title">Order Details</div>
+      <div class="info-row">
+        <p><strong>Order ID:</strong> <%= order.orderId %></p>
+        <p><strong>Order Date:</strong> <%= order.orderDate %></p>
+        <p><strong>Order Total:</strong> ₹<%= order.totalAmount %></p>
+        <p><strong>Payment Method:</strong> <%= order.paymentMethod %></p>
+        <p><strong>Shipping:</strong> <%= order.shippingOption?.title || 'Standard Shipping' %></p>
+        <% if (order.note) { %>
+          <p><strong>Note:</strong> <%= order.note %></p>
+        <% } %>
+      </div>
+    </div>
+  
+    <div class="section">
+      <div class="section-title">Shipping Address</div>
+      <div class="info-row">
+        <p><%= order.customerName %></p>
+        <p><%= order.shippingAddress?.street || 'Street not provided' %></p>
+        <p><%= order.shippingAddress?.city || 'City' %>, 
+           <%= order.shippingAddress?.state || 'State' %> - 
+           <%= order.shippingAddress?.pincode || 'Pincode' %></p>
+        <p>📞 <%= order.shippingAddress?.phone || 'Phone not available' %></p>
+      </div>
+    </div>
+  
+    <div class="section">
+      <div class="section-title">Your Items</div>
+  
+      <% order.items.forEach((item) => { %>
+        <div class="product-card">
+          <h3><%= item.name %></h3>
+          <div class="detail">
+            Quantity: <%= item.quantity %><br>
+            <% if (item.activeSize) { %>Size ID: <%= item.activeSize %><br><% } %>
+            Offer Price: ₹<%= item.offerPrice || item.finalPrice || item.price %><br>
+            <% if (item.price && item.price !== item.offerPrice) { %>
+              Original Price: ₹<%= item.price %>
+            <% } %>
+          </div>
+        </div>
+      <% }); %>
+  
+      <p class="total">Final Total: ₹<%= order.totalAmount %></p>
+  
+      <div style="text-align:center;">
+        <a href="#" class="cta-btn">Track Your Order</a>
+      </div>
+    </div>
+  
+    <div class="footer">
+      This is a confirmation for your Beaubless order.<br>
+      Need help? Email us at <a href="mailto:care@beaubless.com">care@beaubless.com</a><br><br>
+      © 2025 Beaubless – Where beauty meets care.
+    </div>
+  </div>
+  
+
+</body>
+</html>
