@@ -48,12 +48,20 @@ export const createCoupon = async (req, res) => {
 // ✅ Get all coupons
 export const getAllCoupons = async (req, res) => {
   try {
-    const coupons = await Coupon.find().sort({ createdAt: -1 });
+    const now = new Date();
+
+    const coupons = await Coupon.find({
+      startDate: { $lte: now },
+      expireDate: { $gte: now },
+      isActive: true,
+    }).sort({ createdAt: -1 });
+
     res.status(200).json({ success: true, coupons });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // ✅ Get a single coupon by ID
 export const getCouponById = async (req, res) => {
