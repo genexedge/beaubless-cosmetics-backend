@@ -3,7 +3,7 @@ import {
   createOrderController,
   verifyPaymentController,
   getAllOrder,
-  updateOrderStatus,getOrderById,cancelOrder
+  updateOrderStatus,getOrderById,cancelOrder,trackOrderById
 } from "../controllers/orderController.js";
 import { createOrderTwoController } from "../controllers/orderTwoController.js";
 
@@ -15,6 +15,6 @@ router.get("/verify-payment", verifyPaymentController);
 router.get('/get-all-order', getAllOrder);
 router.get('/getOrderById/:orderId', getOrderById);
 router.put('/update-status', updateOrderStatus);
-
+router.post("/track-order", trackOrderById);
 router.delete('/cancel-order/:orderId', cancelOrder);
 export default router;

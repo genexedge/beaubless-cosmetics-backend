@@ -212,6 +212,8 @@ export const createOrderController = async (req, res) => {
 
       // Accumulate total price before discount
       calculatedTotal += price * quantity;
+      console.log("calculatedTotal",calculatedTotal);
+      
       
     }
     const { discountAmount, error } = await applyCoupon(
@@ -219,7 +221,11 @@ export const createOrderController = async (req, res) => {
       calculatedTotal
     );
     
-   
+    console.log(">> Coupon Applied:");
+    console.log("Active Coupon Code:", activeCoupon?.code);
+    console.log("Calculated Total (Before Discount):", calculatedTotal);
+    console.log("Discount Amount Returned:", discountAmount);
+    console.log("Error (if any):", error);
     
     if (error) {
       return res.status(400).json({ success: false, message: error });
@@ -227,17 +233,28 @@ export const createOrderController = async (req, res) => {
     
     // Calculate final price
     let finalTotalPrice = Math.max(calculatedTotal - discountAmount, 0);
+    console.log(">> After Discount:");
+    console.log("Final Total after Discount (without shipping):", finalTotalPrice);
     
     if (selectedShippingOption) {
+      console.log(">> Shipping Option Selected:");
+      console.log("Shipping Charges:", selectedShippingOption?.charges);
       finalTotalPrice += selectedShippingOption.charges;
     }
+    
+    console.log(">> Final Calculation:");
+    console.log("Final Total with Shipping:", finalTotalPrice);
+    console.log("Frontend Sent Final Order Total:", finalOrderTotal);
     
     if (
       parseFloat(finalTotalPrice).toFixed(2) !==
       parseFloat(finalOrderTotal).toFixed(2)
     ) {
+      console.log("❌ Total price mismatch detected!");
       return res.status(400).json({ message: "Total price mismatch detected" });
     }
+    
+    console.log("✅ Total price matched. Proceeding with order creation...");
     
     
     // Create order object
@@ -461,12 +478,51 @@ export const updateOrderStatus = async (req, res) => {
         .json({ success: false, message: "Order not found!" });
     }
 
+    // ✅ If the current status is "Cancelled", regain inventory before update
+    if (order.orderStatus === "Cancelled") {
+      let cartProducts = order.cartProducts;
+      let insufficientStock = null;
+
+      for (let item of cartProducts) {
+        const product = await Product.findById(item.productId);
+        if (!product) continue;
+
+        const orderQty = item.quantity || 1;
+
+        if (product.productType === "variant") {
+          const variantIndex = product.variants.findIndex(
+            (v) => v._id.toString() === item.activeSize?.toString()
+          );
+
+          if (variantIndex === -1) {
+            insufficientStock = `Variant not found for ${product.name}`;
+            break;
+          }
+
+          const currentStock = product.variants[variantIndex].inventory || 0;
+          product.variants[variantIndex].inventory = currentStock + orderQty;
+        } else {
+          const currentStock = product.stock || 0;
+          product.stock = currentStock + orderQty;
+        }
+
+        await product.save();
+      }
+
+      if (insufficientStock) {
+        return res.status(400).json({ message: insufficientStock });
+      }
+
+      console.log("🟢 Inventory regained successfully");
+    }
+
+    // ✅ Update status
     order.orderStatus = newStatus;
     order.statusHistory.push({ status: newStatus, updatedAt: new Date() });
 
     await order.save();
 
-    // ✅ Send email with proper parameters
+    // ✅ Send email
     await sendOrderStatusEmail(order.email, {
       email: order.email,
       data: order,
@@ -477,10 +533,12 @@ export const updateOrderStatus = async (req, res) => {
     res
       .status(200)
       .json({ success: true, message: "Order status updated!", order });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 
 export const cancelOrder = async (req, res) => {
@@ -507,5 +565,36 @@ export const cancelOrder = async (req, res) => {
   } catch (error) {
     console.error("Error cancelling order:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const trackOrderById = async (req, res) => {
+  try {
+    const { email, orderId } = req.body;
+
+    if (!email || !orderId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and Order ID are required!" });
+    }
+
+    const order = await Order.findOne({ _id: orderId, email });
+
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Order not found with provided details." });
+    }
+
+    const { orderStatus, statusHistory } = order;
+
+    res.status(200).json({
+      success: true,
+      orderStatus,
+      statusHistory,
+    });
+  } catch (error) {
+    console.error("Track Order Error:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
