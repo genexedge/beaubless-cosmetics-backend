@@ -85,20 +85,7 @@ const initiatePhonePePayment = async (finalTotalPrice, email) => {
 
 export const createOrderController = async (req, res) => {
   try {
-    const {
-      email,
-      firstName,
-      lastName,
-      phone,
-      address,
-      cartProducts,
-      finalOrderTotal,
-      note,
-      paymentMethod,
-      activeCoupon,
-      discountDetails,
-      selectedShippingOption,
-    } = req.body.orderData;
+    const { email, firstName,  lastName,   phone,     address,      cartProducts, finalOrderTotal, note, paymentMethod, activeCoupon,   discountDetails, selectedShippingOption, } = req.body.orderData;
 
     // Validate required fields
     if (!email) {
@@ -225,28 +212,34 @@ export const createOrderController = async (req, res) => {
 
       // Accumulate total price before discount
       calculatedTotal += price * quantity;
+      
     }
-
     const { discountAmount, error } = await applyCoupon(
       activeCoupon.code,
       calculatedTotal
     );
+    
+   
+    
     if (error) {
       return res.status(400).json({ success: false, message: error });
     }
-
+    
     // Calculate final price
     let finalTotalPrice = Math.max(calculatedTotal - discountAmount, 0);
+    
     if (selectedShippingOption) {
       finalTotalPrice += selectedShippingOption.charges;
     }
-
+    
     if (
       parseFloat(finalTotalPrice).toFixed(2) !==
       parseFloat(finalOrderTotal).toFixed(2)
     ) {
       return res.status(400).json({ message: "Total price mismatch detected" });
     }
+    
+    
     // Create order object
     const newOrder = new Order({
       userId,

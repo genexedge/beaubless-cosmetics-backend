@@ -44,6 +44,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v2.0.8 | Variant API CRUD | rishabh |
 | v2.0.9 | Variant Fixed CRUD | rishabh |
 | v2.1.0 | Email Issue fixed and Invertory reduce fixed CRUD | rishabh |
+| v2.1.1 | issue in order coupon code | rishabh |
 =======
 
 ## Installation
