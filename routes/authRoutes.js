@@ -8,6 +8,7 @@
 // export default router;
 import User from "../models/userModel.js";
 import express from "express";
+import upload from "../middlewares/multerConfig.js";
 import {
   forgotPasswordController,
   loginController,
@@ -52,7 +53,7 @@ router.get("/admin-auth", requireSignIn, isAdmin, (req, res) => {
 });
 
 //update profile
-router.put("/update-profile", updateProfileController);
+router.put("/update-profile", upload.array("image", 1), updateProfileController);
 router.get("/getAllUser", async (req, res) => {
   try {
       const users = await User.find(); // Fetch users

@@ -225,10 +225,14 @@ export const forgotPasswordController = async (req, res) => {
 //update profile
 export const updateProfileController = async (req, res) => {
   try {
-    const { firstName,lastName, email, password, address, phone } = req.body;
+    const { firstName, lastName, email, password, address, phone } = req.body;
     const user = await User.findOne({ email });
 
-    //password
+    if (!user) {
+      return res.status(404).send({ success: false, message: "User not found" });
+    }
+
+    // password check
     if (password && password.length < 6) {
       return res.status(400).send({
         success: false,
@@ -236,8 +240,15 @@ export const updateProfileController = async (req, res) => {
       });
     }
 
-    //hash password
+    // hash password
     const hashedPassword = password ? await hashPassword(password) : undefined;
+
+    // Handle uploaded image
+    let profilePhoto = user.profilePhoto;
+    if (req.files && req.files.length > 0) {
+      profilePhoto = req.files[0].path; // multer stores path here
+    }
+
     const updateUser = await User.findOneAndUpdate(
       user._id,
       {
@@ -246,23 +257,26 @@ export const updateProfileController = async (req, res) => {
         password: hashedPassword || user.password,
         address: address || user.address,
         phone: phone || user.phone,
+        profilePhoto, // ✅ save photo path
       },
       { new: true }
     );
+
     res.status(200).send({
       success: true,
-      message: "Profile Update Successfully",
+      message: "Profile Updated Successfully",
       updateUser,
     });
   } catch (error) {
-    console.log(`Error while update user profile ${error}`);
-    res.status(404).send({
+    console.log(`Error while updating user profile: ${error}`);
+    res.status(500).send({
       success: false,
-      message: "Error while update user profile",
+      message: "Error while updating user profile",
       error,
     });
   }
 };
+
 
 
 

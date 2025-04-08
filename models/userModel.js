@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    profilePhoto: {
+      type: String, // URL or file path of the image
+      default: "",  // Optional: default image URL can be set here
+    },
     addresses: [addressSchema],  // Now supports multiple addresses
     answer: {
       type: String,
