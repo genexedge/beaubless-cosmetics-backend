@@ -3,7 +3,7 @@ import {
   createOrderController,
   verifyPaymentController,
   getAllOrder,
-  updateOrderStatus,getOrderById,cancelOrder,trackOrderById
+  updateOrderStatus,getOrderById,cancelOrder,trackOrderById,getAllOrderByUser
 } from "../controllers/orderController.js";
 import { createOrderTwoController } from "../controllers/orderTwoController.js";
 
@@ -13,6 +13,7 @@ router.post("/checkout", createOrderController);
 router.post("/pay", createOrderTwoController);
 router.get("/verify-payment", verifyPaymentController);
 router.get('/get-all-order', getAllOrder);
+router.get('/user-order/:userId', getAllOrderByUser);
 router.get('/getOrderById/:orderId', getOrderById);
 router.put('/update-status', updateOrderStatus);
 router.post("/track-order", trackOrderById);

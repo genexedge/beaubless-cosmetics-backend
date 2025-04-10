@@ -23,6 +23,23 @@ export const getAllOrder = async (req, res) => {
   }
 };
 
+export const getAllOrderByUser = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const userOrders = await Order.find({ userId }).sort({ createdAt: -1 }); // assuming "user" field stores userId in Order schema
+
+    if (!userOrders || userOrders.length === 0) {
+      return res.status(404).json({ message: "No orders found for this user." });
+    }
+
+    res.status(200).json({success:true,userOrders});
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch user orders", error });
+  }
+};
+
+
 export const getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
