@@ -233,20 +233,22 @@ export const createOrderController = async (req, res) => {
       
       
     }
-    const { discountAmount, error } = await applyCoupon(
-      activeCoupon.code,
-      calculatedTotal
-    );
-    
-    console.log(">> Coupon Applied:");
-    console.log("Active Coupon Code:", activeCoupon?.code);
-    console.log("Calculated Total (Before Discount):", calculatedTotal);
-    console.log("Discount Amount Returned:", discountAmount);
-    console.log("Error (if any):", error);
-    
-    if (error) {
-      return res.status(400).json({ success: false, message: error });
-    }
+    // Apply coupon only if it exists
+if (activeCoupon?.code) {
+  const result = await applyCoupon(activeCoupon.code, calculatedTotal);
+  discountAmount = result.discountAmount || 0;
+
+  if (result.error) {
+    return res.status(400).json({ success: false, message: result.error });
+  }
+
+  console.log(">> Coupon Applied:");
+  console.log("Active Coupon Code:", activeCoupon.code);
+  console.log("Calculated Total (Before Discount):", calculatedTotal);
+  console.log("Discount Amount Returned:", discountAmount);
+} else {
+  console.log(">> No coupon applied.");
+}
     
     // Calculate final price
     let finalTotalPrice = Math.max(calculatedTotal - discountAmount, 0);
