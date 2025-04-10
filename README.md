@@ -48,6 +48,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v2.1.2 | coupon code condition applied | rishabh |
 | v2.1.3 | track Order APi |  | rishabh |
 | v2.1.4 | Profile phone update in https://api.beaubless.com/api/v1/auth/update-profile APi | rishabh |
+| v2.1.5 | Get Orders by User Controller and Route | Sunil |
 =======
 
 ## Installation
