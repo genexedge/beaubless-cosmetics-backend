@@ -56,7 +56,7 @@ export const registerController = async (req, res) => {
         country,
         pincode,
       },
-      role: role || 0, // Default to 'User' if not provided
+      role: role || "user", // Default to 'User' if not provided
     });
 
     await user.save();
