@@ -234,6 +234,7 @@ export const createOrderController = async (req, res) => {
       
     }
     // Apply coupon only if it exists
+  let discountAmount = 0;
 if (activeCoupon?.code) {
   const result = await applyCoupon(activeCoupon.code, calculatedTotal);
   discountAmount = result.discountAmount || 0;
