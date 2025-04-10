@@ -29,9 +29,6 @@ export const getAllOrderByUser = async (req, res) => {
   try {
 
     // console.log(orders)
-    const Orders = await Order.find().sort({ createdAt: -1 });
-    console.log("Orders",Orders)
-    console.log("userId",userId)
     const userOrders = await Order.find({ userId }).sort({ createdAt: -1 }); // assuming "user" field stores userId in Order schema
     console.log("userOrders",userOrders)
     if (!userOrders || userOrders.length === 0) {
@@ -149,7 +146,6 @@ export const createOrderController = async (req, res) => {
         backendCart.products.forEach((item) => {
           const product = item.productId;
           if (!product) return; // Prevent error if product is missing
-
           const isVariantProduct = product.productType === "variant";
           let price;
 
@@ -170,19 +166,21 @@ export const createOrderController = async (req, res) => {
                 activeSize &&
                 variant._id.toString() === activeSize
             );
-
+            console.log("selectedVariant",selectedVariant)
             price = selectedVariant
-              ? selectedVariant.offerPrice ??
-                selectedVariant.finalPrice ??
-                selectedVariant.price ??
-                0
-              : product.offerPrice ?? product.finalPrice ?? product.price ?? 0;
+  ? selectedVariant.offerPrice || selectedVariant.offerprice ||
+    selectedVariant.finalPrice || selectedVariant.finalprice ||
+    selectedVariant.price || selectedVariant.Price || 0
+  : product.offerPrice || product.finalPrice || product.price || 0;
+
+              console.log(price,product.offerPrice,product.finalPrice,product.price)
           } else {
             // If it's a single product (not a variant)
+            console.log("elsePrice",price)
             price =
               product.offerPrice ?? product.finalPrice ?? product.price ?? 0;
           }
-
+          console.log(price)
           // Store the computed price and quantity in the backendCartMap
           backendCartMap.set(product._id?.toString() || "", {
             quantity: item.quantity,
@@ -227,6 +225,7 @@ export const createOrderController = async (req, res) => {
             .status(400)
             .json({ message: "Cart quantity mismatch detected" });
         }
+        console.log(backendCartMap.get(productId) , price)
         if (backendCartMap.get(productId).price !== price) {
           return res.status(400).json({ message: "Price mismatch detected" });
         }

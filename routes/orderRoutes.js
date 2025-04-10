@@ -14,7 +14,7 @@ router.post("/pay", createOrderTwoController);
 router.get("/verify-payment", verifyPaymentController);
 router.get('/get-all-order', getAllOrder);
 router.get('/user-order/:userId', getAllOrderByUser);
-router.get('/getOrderById/:orderId', getOrderById);
+router.get('/order-details/:orderId', getOrderById);
 router.put('/update-status', updateOrderStatus);
 router.post("/track-order", trackOrderById);
 router.delete('/cancel-order/:orderId', cancelOrder);
