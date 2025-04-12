@@ -623,12 +623,13 @@ export const trackOrderById = async (req, res) => {
   }
 };
 
+const merchant_id = '4240148';
+const access_code = 'ATHM65MD34AU69MHUA';
+const working_key = '947D86B6EE2E87282AF34AF74C60E5B3';
+
+
 export const testOrder = async (req, res) => {
   const { amount, name, email, phone } = req.body;
-
-  const merchant_id = '4240148';
-  const access_code = 'ATHM65MD34AU69MHUA';
-  const working_key = '947D86B6EE2E87282AF34AF74C60E5B3';
 
   const order_id = `ORDER${Date.now()}`;
 
@@ -643,10 +644,11 @@ export const testOrder = async (req, res) => {
     billing_name: name,
     billing_email: email,
     billing_tel: phone,
-    integration_type: 'iframe_normal' // Required for iframe integration
+    integration_type: 'iframe_normal',  // required for iframe
+    payment_option: 'OPTCRDC',          // 💳 Force credit card selection
   };
 
-  // Convert data to URL encoded string
+  // Convert to URL-encoded query string
   const formBody = Object.entries(data).map(
     ([key, val]) => `${key}=${encodeURIComponent(val)}`
   ).join('&');

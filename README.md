@@ -54,6 +54,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v2.1.8 |Updated Order Controller | Sunil |
 | v2.1.9  |CC Avenue Testing Version| Sunil   |
 | v3.0.0  |CC Avenue Product URL Update| Sunil   |
+| v3.0.1  |CC Avenue  Update Payment Menthod| Sunil   |
 =======
 
 ## Installation
