@@ -53,6 +53,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v2.1.7 | No Coupon Code Found Error | Sunil |
 | v2.1.8 |Updated Order Controller | Sunil |
 | v2.1.9  |CC Avenue Testing Version| Sunil   |
+| v3.0.0  |CC Avenue Product URL Update| Sunil   |
 =======
 
 ## Installation
