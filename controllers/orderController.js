@@ -622,3 +622,50 @@ export const trackOrderById = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const testOrder = async (req, res) => {
+  const { amount, name, email, phone } = req.body;
+
+  const merchant_id = '4240148';
+  const access_code = 'ATHM65MD34AU69MHUA';
+  const working_key = '947D86B6EE2E87282AF34AF74C60E5B3';
+
+  const order_id = `ORDER${Date.now()}`;
+
+  const data = {
+    merchant_id,
+    order_id,
+    currency: 'INR',
+    amount,
+    redirect_url: 'https://yourdomain.com/payment-success',
+    cancel_url: 'https://yourdomain.com/payment-cancel',
+    language: 'EN',
+    billing_name: name,
+    billing_email: email,
+    billing_tel: phone,
+    integration_type: 'iframe_normal' // Required for iframe integration
+  };
+
+  // Convert data to URL encoded string
+  const formBody = Object.entries(data).map(
+    ([key, val]) => `${key}=${encodeURIComponent(val)}`
+  ).join('&');
+
+  // Encrypt using AES-128-CBC
+  const encrypt = (plainText, workingKey) => {
+    const key = crypto.createHash('md5').update(workingKey).digest();
+    const iv = Buffer.from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+    const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
+    let encrypted = cipher.update(plainText, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted;
+  };
+
+  const encRequest = encrypt(formBody, working_key);
+
+  res.json({
+    encRequest,
+    access_code,
+    order_id
+  });
+};
