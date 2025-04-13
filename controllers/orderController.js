@@ -644,7 +644,7 @@ export const testOrder = async (req, res) => {
     billing_name: name,
     billing_email: email,
     billing_tel: phone,
-    integration_type: 'iframe_normal',  // required for iframe
+    integration_type: 'redirect',  // required for iframe
     payment_option: 'OPTCRDC',          // 💳 Force credit card selection
   };
 
@@ -662,7 +662,6 @@ export const testOrder = async (req, res) => {
     encrypted += cipher.final('hex');
     return encrypted;
   };
-
   const encRequest = encrypt(formBody, working_key);
 
   res.json({
