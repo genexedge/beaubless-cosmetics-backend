@@ -8,7 +8,7 @@ import {
     insertManyProductsController,
     updateProductController,
     getAllCategoriesController,
-    createCategoryController,deleteCategoryController,addVariant,deleteVariant,updateVariant
+    createCategoryController,deleteCategoryController,addVariant,deleteVariant,updateVariant,getProductsByCategoryController
 
 } from "../controllers/productController.js";
 import upload from "../middlewares/multerConfig.js";
@@ -22,7 +22,7 @@ router.get("/get-all-product", getAllProductController); //get all product route
 
 router.get("/get-all-categories", getAllCategoriesController);
 router.post("/create-category", upload.array("image", 10), createCategoryController);
-
+router.get('/category/:categoryId', getProductsByCategoryController);
 router.get("/get-single-product/:slug", getSingleProductController); //get single product route
 
 router.put("/update-product/:pid",
