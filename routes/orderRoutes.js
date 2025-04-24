@@ -4,7 +4,7 @@ import {
   verifyPaymentController,
   getAllOrder,
   updateOrderStatus,getOrderById,cancelOrder,trackOrderById,getAllOrderByUser,
-  testOrder
+
 } from "../controllers/orderController.js";
 import { createOrderTwoController } from "../controllers/orderTwoController.js";
 
@@ -19,5 +19,5 @@ router.get('/order-details/:orderId', getOrderById);
 router.put('/update-status', updateOrderStatus);
 router.post("/track-order", trackOrderById);
 router.delete('/cancel-order/:orderId', cancelOrder);
-router.post('/test-order', testOrder);
+// router.post('/test-order', testOrder);
 export default router;

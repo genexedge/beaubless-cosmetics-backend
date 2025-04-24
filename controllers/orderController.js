@@ -103,6 +103,58 @@ const initiatePhonePePayment = async (finalTotalPrice, email) => {
   }
 };
 
+const merchant_id = '4240148';
+const access_code = 'AVHM65MD34AU69MHUA';
+const working_key = '947D86B6EE2E87282AF34AF74C60E5B3';
+
+const initiateCcAvenuePayment = async ({ amount, name, email, phone }) => {
+  try {
+    const order_id = `ORDER${Date.now()}`;
+
+    const data = {
+      merchant_id,
+      order_id,
+      currency: 'INR',
+      amount,
+      redirect_url: 'https://www.beaubless.com/order-success',
+      cancel_url: 'https://www.beaubless.com/order-failure',
+      language: 'EN',
+      billing_name: name,
+      billing_email: email,
+      billing_tel: phone,
+      integration_type: 'redirect',
+      payment_option: 'OPTCRDC',
+    };
+
+    const formBody = Object.entries(data)
+      .map(([key, val]) => `${key}=${encodeURIComponent(val)}`)
+      .join('&');
+
+    const encrypt = (plainText, workingKey) => {
+      const key = crypto.createHash('md5').update(workingKey).digest();
+      const iv = Buffer.from([...Array(16).keys()]);
+      const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
+      let encrypted = cipher.update(plainText, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      return encrypted;
+    };
+
+    const encRequest = encrypt(formBody, working_key);
+
+    return {
+      success: true,
+      encRequest,
+      access_code,
+      order_id,
+    };
+
+  } catch (error) {
+    console.error("CCAvenue Payment Error:", error);
+    return { success: false, message: "CCAvenue payment initiation failed" };
+  }
+};
+
+
 export const createOrderController = async (req, res) => {
   try {
     const { email, firstName,  lastName,   phone,     address,      cartProducts, finalOrderTotal, note, paymentMethod, activeCoupon,   discountDetails, selectedShippingOption, } = req.body.orderData;
@@ -398,7 +450,32 @@ await sendOrderPlacedMail(email, {
       } else {
         return res.status(400).json(paymentResponse);
       }
+    } else if (paymentMethod === "CCAvenue") {
+      const ccavenueData = await initiateCcAvenuePayment({
+        amount: finalOrderTotal,
+        name: `${firstName} ${lastName}`,
+        email,
+        phone,
+      });
+    
+      if (ccavenueData.success) {
+        newOrder.paymentStatus = "Pending";
+        newOrder.ccavenueOrderId = ccavenueData.order_id;
+        await newOrder.save();
+        await cartModel.deleteOne({ email });
+    
+        return res.status(201).json({
+          success: true,
+          message: "Redirecting to CCAvenue",
+          encRequest: ccavenueData.encRequest,
+          access_code: ccavenueData.access_code,
+          ccavenue: true,
+        });
+      } else {
+        return res.status(500).json({ success: false, message: ccavenueData.message });
+      }
     }
+    
   } catch (error) {
     console.error("Error placing order:", error);
     res
@@ -631,50 +708,5 @@ export const trackOrderById = async (req, res) => {
   }
 };
 
-const merchant_id = '4240148';
-const access_code = 'AVHM65MD34AU69MHUA';
-const working_key = '947D86B6EE2E87282AF34AF74C60E5B3';
 
 
-export const testOrder = async (req, res) => {
-  const { amount, name, email, phone } = req.body;
-
-  const order_id = `ORDER${Date.now()}`;
-
-  const data = {
-    merchant_id,
-    order_id,
-    currency: 'INR',
-    amount,
-    redirect_url: 'https://www.beaubless.com/order-successs',
-    cancel_url: 'https://www.beaubless.com/order-failure',
-    language: 'EN',
-    billing_name: name,
-    billing_email: email,
-    billing_tel: phone,
-    integration_type: 'redirect',  // required for iframe
-    payment_option: 'OPTCRDC',          // 💳 Force credit card selection
-  };
-
-  // Convert to URL-encoded query string
-  const formBody = Object.entries(data).map(
-    ([key, val]) => `${key}=${encodeURIComponent(val)}`
-  ).join('&');
-
-  // Encrypt using AES-128-CBC
-  const encrypt = (plainText, workingKey) => {
-    const key = crypto.createHash('md5').update(workingKey).digest();
-    const iv = Buffer.from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
-    const cipher = crypto.createCipheriv('aes-128-cbc', key, iv);
-    let encrypted = cipher.update(plainText, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return encrypted;
-  };
-  const encRequest = encrypt(formBody, working_key);
-
-  res.json({
-    encRequest,
-    access_code,
-    order_id
-  });
-};
