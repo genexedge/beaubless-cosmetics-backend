@@ -5,6 +5,7 @@ import crypto from "crypto";
 import Product from "../models/productModel.js";
 import userModel from "../models/userModel.js";
 import cartModel from "../models/cartModel.js";
+import mongoose from "mongoose";
 import { sendOrderStatusEmail,sendOrderPlacedMail } from "../controllers/emailController.js";
 
 import {
@@ -601,6 +602,13 @@ export const trackOrderById = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Email and Order ID are required!" });
     }
+     // Check if orderId is a valid ObjectId
+     if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Order ID format." });
+    }
+
 
     const order = await Order.findOne({ _id: orderId, email });
 
@@ -624,7 +632,7 @@ export const trackOrderById = async (req, res) => {
 };
 
 const merchant_id = '4240148';
-const access_code = 'ATHM65MD34AU69MHUA';
+const access_code = 'AVHM65MD34AU69MHUA';
 const working_key = '947D86B6EE2E87282AF34AF74C60E5B3';
 
 

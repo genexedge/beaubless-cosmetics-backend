@@ -329,10 +329,11 @@ export const addAddress = async (req, res) => {
 
 export const updateAddress = async (req, res) => {
   try {
-    const { userId, addressId, updatedAddress } = req.body;
+    const { userId, addressId, updatedAddress } = req.body.userId;
 
     // Ensure all required fields are provided
     if (!userId || !addressId || !updatedAddress) {
+      console.log("called here")
       return res.status(400).json({ success: false, message: "Missing required fields!" });
     }
 
@@ -368,8 +369,7 @@ export const updateAddress = async (req, res) => {
 
 export const deleteAddress = async (req, res) => {
   try {
-    const { userId, addressId } = req.body;
-
+    const { userId, addressId } = req.body.userId;
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found!" });
