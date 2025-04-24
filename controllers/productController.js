@@ -425,6 +425,50 @@ export const getCategoryController = async (req, res) => {
   }
 };
 
+
+// Get Products by Category
+import mongoose from "mongoose";
+
+export const getProductsByCategoryController = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+
+    // Convert to ObjectId
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid category ID",
+      });
+    }
+
+    const products = await Product.find({
+      category: new mongoose.Types.ObjectId(categoryId),
+    });
+
+    if (!products.length) {
+      return res.status(404).send({
+        success: false,
+        message: "No products found for this category",
+      });
+    }
+
+    res.status(200).send({
+      success: true,
+      message: "Products fetched by category",
+      products,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({
+      success: false,
+      message: "Error fetching products by category",
+      error,
+    });
+  }
+};
+
+
+
 // Update Category
 export const updateCategoryController = async (req, res) => {
   try {
