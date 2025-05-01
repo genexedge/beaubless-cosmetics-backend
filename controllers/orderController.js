@@ -6,7 +6,7 @@ import Product from "../models/productModel.js";
 import userModel from "../models/userModel.js";
 import cartModel from "../models/cartModel.js";
 import mongoose from "mongoose";
-import { sendOrderStatusEmail,sendOrderPlacedMail } from "../controllers/emailController.js";
+import { sendOrderStatusEmail,sendOrderPlacedMail,sendOrderPlacedMailAdmin } from "../controllers/emailController.js";
 import Razorpay from "razorpay";
 import {
   StandardCheckoutClient,
@@ -449,6 +449,17 @@ if (insufficientStock) {
 console.log("Stock updated successfully");
 // 📨 Send Order Confirmation Email
 await sendOrderPlacedMail(email, {
+  orderId: newOrder._id,
+  customerName: `${firstName} ${lastName}`,
+  orderDate: new Date().toLocaleString(),
+  shippingAddress: address,
+  items: cartProducts,
+  totalAmount: finalTotalPrice,
+  paymentMethod: paymentMethod,
+  shippingOption: selectedShippingOption,
+  note: note || "",
+});
+await sendOrderPlacedMailAdmin({
   orderId: newOrder._id,
   customerName: `${firstName} ${lastName}`,
   orderDate: new Date().toLocaleString(),

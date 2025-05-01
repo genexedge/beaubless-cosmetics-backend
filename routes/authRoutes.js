@@ -18,6 +18,7 @@ import {
   addAddress, updateAddress, deleteAddress, setDefaultAddress,deleteUserController
 } from "../controllers/authController.js";
 import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
+import { render } from "ejs";
 
 //router object
 
@@ -82,6 +83,9 @@ router.put("/address/update", updateAddress);
 router.delete("/address/delete", deleteAddress);
 
 // Set a default address
-router.put("/address/set-default", setDefaultAddress);
+router.get("/email/view-order", async (req, res) => {
+render('')
+
+});
 
 export default router;
