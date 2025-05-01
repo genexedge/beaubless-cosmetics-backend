@@ -116,6 +116,9 @@ const initiateRazorpayPayment = async (finalOrderTotal, email) => {
       amount: finalOrderTotal * 100, // amount in paise
       currency: "INR",
       receipt: "receipt_" + Date.now(),
+      offers: [
+        "offer_QPcALO9wYrzjC9"
+      ],
       payment_capture: 1, // auto-capture
       notes: {
         email,
@@ -304,21 +307,21 @@ export const createOrderController = async (req, res) => {
         // If it's a single product (not a variant)
         price = item.offerPrice || item.finalPrice || item.price || 0;
       }
-      // Validate backend cart (if logged in)
-      if (!isGuestOrder) {
-        if (!backendCartMap.has(productId)) {
-          return res.status(400).json({ message: "Cart mismatch detected" });
-        }
-        if (backendCartMap.get(productId).quantity !== quantity) {
-          return res
-            .status(400)
-            .json({ message: "Cart quantity mismatch detected" });
-        }
-        console.log(backendCartMap.get(productId) , price)
-        if (backendCartMap.get(productId).price !== price) {
-          return res.status(400).json({ message: "Price mismatch detected" });
-        }
-      }
+      // // Validate backend cart (if logged in)
+      // if (!isGuestOrder) {
+      //   if (!backendCartMap.has(productId)) {
+      //     return res.status(400).json({ message: "Cart mismatch detected" });
+      //   }
+      //   if (backendCartMap.get(productId).quantity !== quantity) {
+      //     return res
+      //       .status(400)
+      //       .json({ message: "Cart quantity mismatch detected" });
+      //   }
+      //   console.log(backendCartMap.get(productId) , price)
+      //   if (backendCartMap.get(productId).price !== price) {
+      //     return res.status(400).json({ message: "Price mismatch detected" });
+      //   }
+      // }
 
       // Accumulate total price before discount
       calculatedTotal += price * quantity;
@@ -502,8 +505,9 @@ await sendOrderPlacedMail(email, {
           message: "Order created successfully, redirecting to Razorpay payment.",
           paymentUrl: `${process.env.FRONTEND_URL}/razorpay-checkout?order_id=${paymentResponse.razorpayOrderId}&amount=${paymentResponse.razorpayOrderDetails.amount}&currency=${paymentResponse.razorpayOrderDetails.currency}&key=${paymentResponse.razorpayOrderDetails.key}&email=${email}`,
           razorpayOrderDetails: paymentResponse.razorpayOrderDetails,
-          OrderDetails:newOrder
+          orderDetails: newOrder,
         });
+        
         
       } else {
         return res.status(400).json({
