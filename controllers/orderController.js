@@ -7,7 +7,7 @@ import userModel from "../models/userModel.js";
 import cartModel from "../models/cartModel.js";
 import mongoose from "mongoose";
 import { sendOrderStatusEmail,sendOrderPlacedMail } from "../controllers/emailController.js";
-
+import Razorpay from "razorpay";
 import {
   StandardCheckoutClient,
   StandardCheckoutPayRequest,
@@ -102,6 +102,42 @@ const initiatePhonePePayment = async (finalTotalPrice, email) => {
     return { success: false, message: "Payment initiation failed" };
   }
 };
+
+
+
+const razorpayInstance = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+const initiateRazorpayPayment = async (finalOrderTotal, email) => {
+  try {
+    const razorpayOrder = await razorpayInstance.orders.create({
+      amount: finalOrderTotal * 100, // amount in paise
+      currency: "INR",
+      receipt: "receipt_" + Date.now(),
+      payment_capture: 1, // auto-capture
+      notes: {
+        email,
+      },
+    });
+
+    return {
+      success: true,
+      razorpayOrderId: razorpayOrder.id,
+      razorpayOrderDetails: {
+        id: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        key: process.env.RAZORPAY_KEY_ID, // required by frontend to complete payment
+      },
+    };
+  } catch (error) {
+    console.error("Razorpay Payment Error:", error);
+    return { success: false, message: "Razorpay payment initiation failed" };
+  }
+};
+
 
 const merchant_id = '4240148';
 const access_code = 'AVHM65MD34AU69MHUA';
@@ -268,21 +304,21 @@ export const createOrderController = async (req, res) => {
         // If it's a single product (not a variant)
         price = item.offerPrice || item.finalPrice || item.price || 0;
       }
-      // Validate backend cart (if logged in)
-      if (!isGuestOrder) {
-        if (!backendCartMap.has(productId)) {
-          return res.status(400).json({ message: "Cart mismatch detected" });
-        }
-        if (backendCartMap.get(productId).quantity !== quantity) {
-          return res
-            .status(400)
-            .json({ message: "Cart quantity mismatch detected" });
-        }
-        console.log(backendCartMap.get(productId) , price)
-        if (backendCartMap.get(productId).price !== price) {
-          return res.status(400).json({ message: "Price mismatch detected" });
-        }
-      }
+      // // Validate backend cart (if logged in)
+      // if (!isGuestOrder) {
+      //   if (!backendCartMap.has(productId)) {
+      //     return res.status(400).json({ message: "Cart mismatch detected" });
+      //   }
+      //   if (backendCartMap.get(productId).quantity !== quantity) {
+      //     return res
+      //       .status(400)
+      //       .json({ message: "Cart quantity mismatch detected" });
+      //   }
+      //   console.log(backendCartMap.get(productId) , price)
+      //   if (backendCartMap.get(productId).price !== price) {
+      //     return res.status(400).json({ message: "Price mismatch detected" });
+      //   }
+      // }
 
       // Accumulate total price before discount
       calculatedTotal += price * quantity;
@@ -450,7 +486,40 @@ await sendOrderPlacedMail(email, {
       } else {
         return res.status(400).json(paymentResponse);
       }
-    } else if (paymentMethod === "CCAvenue") {
+    } else if (paymentMethod === "Razorpay") {
+    try {
+      // Call the function to initiate Razorpay payment
+      const paymentResponse = await initiateRazorpayPayment(finalOrderTotal, email);
+  
+      if (paymentResponse.success) {
+        newOrder.razorpayOrderId = paymentResponse.razorpayOrderId;
+        newOrder.paymentStatus = "Pending";
+        await newOrder.save();
+        await cartModel.deleteOne({ email });
+  
+        return res.status(201).json({
+          success: true,
+          message: "Order created successfully, redirecting to Razorpay payment.",
+          paymentUrl: `${process.env.FRONTEND_URL}/razorpay-checkout?order_id=${paymentResponse.razorpayOrderId}&amount=${paymentResponse.razorpayOrderDetails.amount}&currency=${paymentResponse.razorpayOrderDetails.currency}&key=${paymentResponse.razorpayOrderDetails.key}&email=${email}`,
+          razorpayOrderDetails: paymentResponse.razorpayOrderDetails,
+          orderDetails: newOrder,
+        });
+        
+        
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: paymentResponse.message || "Razorpay payment initiation failed.",
+        });
+      }
+    } catch (error) {
+      console.error("Razorpay payment error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error during Razorpay payment initiation.",
+      });
+    }
+  } else if (paymentMethod === "CCAvenue") {
       const ccavenueData = await initiateCcAvenuePayment({
         amount: finalOrderTotal,
         name: `${firstName} ${lastName}`,

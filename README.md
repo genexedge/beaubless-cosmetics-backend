@@ -57,6 +57,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v3.0.1  |CC Avenue  Update Payment Menthod| Sunil   |
 | v3.0.4  |Updated the verison just| Sunil   |
 | v3.0.5  |CC Avenue Added| Sunil   |
+| v3.0.6  |Razorpay test integration| Sunil   |
 =======
 
 ## Installation
