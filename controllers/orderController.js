@@ -447,30 +447,6 @@ if (insufficientStock) {
 }
 
 console.log("Stock updated successfully");
-// 📨 Send Order Confirmation Email
-await sendOrderPlacedMail(email, {
-  orderId: newOrder._id,
-  customerName: `${firstName} ${lastName}`,
-  orderDate: new Date().toLocaleString(),
-  shippingAddress: address,
-  items: cartProducts,
-  totalAmount: finalTotalPrice,
-  paymentMethod: paymentMethod,
-  shippingOption: selectedShippingOption,
-  note: note || "",
-});
-await sendOrderPlacedMailAdmin({
-  orderId: newOrder._id,
-  customerName: `${firstName} ${lastName}`,
-  orderDate: new Date().toLocaleString(),
-  shippingAddress: address,
-  items: cartProducts,
-  totalAmount: finalTotalPrice,
-  paymentMethod: paymentMethod,
-  shippingOption: selectedShippingOption,
-  note: note || "",
-});
-
 
     
     if (paymentMethod === "COD") {
@@ -479,6 +455,29 @@ await sendOrderPlacedMailAdmin({
       if (userId) {
         await cartModel.deleteOne({ userId });
       }
+      // 📨 Send Order Confirmation Email
+      await sendOrderPlacedMail(email, {
+        orderId: newOrder._id,
+        customerName: `${firstName} ${lastName}`,
+        orderDate: new Date().toLocaleString(),
+        shippingAddress: address,
+        items: cartProducts,
+        totalAmount: finalTotalPrice,
+        paymentMethod: paymentMethod,
+        shippingOption: selectedShippingOption,
+        note: note || "",
+      });
+      await sendOrderPlacedMailAdmin({
+        orderId: newOrder._id,
+        customerName: `${firstName} ${lastName}`,
+        orderDate: new Date().toLocaleString(),
+        shippingAddress: address,
+        items: cartProducts,
+        totalAmount: finalTotalPrice,
+        paymentMethod: paymentMethod,
+        shippingOption: selectedShippingOption,
+        note: note || "",
+      });
       return res
         .status(201)
         .json({ success: true, message: "Order placed successfully" });
