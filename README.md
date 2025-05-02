@@ -28,7 +28,6 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v0.0.9  | order API                                          | Rishabh |
 | v1.0.1  | Changed Product System                             | Sunil   |
 | v1.0.2  | Changed Product System                             | Sunil   |
-
 | v1.0.4 | order Status API,product API,user Address API | Rishabh |
 | v1.0.5 | Update API | Rishabh |
 | v1.0.6 | Update API v0.0.6 | Rishabh |
@@ -60,6 +59,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v3.0.6  |Razorpay test integration| Sunil   |
 | v3.0.7  |Razorpay Offer Added| Sunil   |
 | v3.0.8  |Mail Template Changed | Rishabh   |
+| v3.0.9  |Mail Template Updated | Rishabh   |
 =======
 
 ## Installation
