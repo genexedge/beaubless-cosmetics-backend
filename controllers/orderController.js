@@ -116,9 +116,7 @@ const initiateRazorpayPayment = async (finalOrderTotal, email) => {
       amount: finalOrderTotal * 100, // amount in paise
       currency: "INR",
       receipt: "receipt_" + Date.now(),
-      offers: [
-        "offer_QPcALO9wYrzjC9"
-      ],
+
       payment_capture: 1, // auto-capture
       notes: {
         email,
