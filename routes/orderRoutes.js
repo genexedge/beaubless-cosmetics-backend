@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.post("/checkout", createOrderController);
 router.post("/pay", createOrderTwoController);
-router.get("/verify-payment", verifyPaymentController);
+router.post("/verify-payment", verifyPaymentController);
 router.get('/get-all-order', getAllOrder);
 router.get('/user-order/:userId', getAllOrderByUser);
 router.get('/order-details/:orderId', getOrderById);

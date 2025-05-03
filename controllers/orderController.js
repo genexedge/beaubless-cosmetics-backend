@@ -505,7 +505,7 @@ console.log("Stock updated successfully");
       const paymentResponse = await initiateRazorpayPayment(finalOrderTotal, email);
   
       if (paymentResponse.success) {
-        newOrder.razorpayOrderId = paymentResponse.razorpayOrderId;
+        newOrder.razorpayOrderId = paymentResponse.razorpayOrderDetails.id;
         newOrder.paymentStatus = "Pending";
         await newOrder.save();
         await cartModel.deleteOne({ email });
@@ -569,6 +569,75 @@ console.log("Stock updated successfully");
 //controller for verifying payment
 
 export const verifyPaymentController = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+console.log(orderId);
+
+    if (!orderId) {
+      return res.status(400).json({ message: "Missing order ID" });
+    }
+
+    const order = await Order.findOne({ razorpayOrderId: orderId });
+    console.log(order);
+    
+    if (!order.razorpayOrderId) {
+      return res.status(400).json({ message: "No Razorpay Order ID associated with this order" });
+    }
+
+    const response = await axios.get(
+      `https://api.razorpay.com/v1/orders/${order.razorpayOrderId}/payments`,
+      {
+        auth: {
+          username: process.env.RAZORPAY_KEY_ID,
+          password: process.env.RAZORPAY_KEY_SECRET,
+        },
+      }
+    );
+    console.log(response.data);
+    
+
+    // Save Razorpay payment logs to the order
+    const status = response.data.items.status;
+
+    let orderStatus = "pending"; // default
+    switch (status) {
+      case "captured":
+        orderStatus = "confirmed";
+        break;
+      case "authorized":
+      case "created":
+      case "pending":
+        orderStatus = "pending";
+        break;
+      case "failed":
+      case "refunded":
+      case "cancelled":
+        orderStatus = "cancelled";
+        break;
+    }
+    order.paymentLog = response.data; // full Razorpay object
+    order.paymentStatus = response.data.items.status;
+    order.orderStatus = orderStatus;
+     
+    await order.save();
+
+    return res.status(200).json({
+      message: "Payment logs fetched and saved successfully",
+      paymentStatus:response.data.items.status,
+      orderStatus,
+      paymentLogs: order.paymentLog,
+    });
+
+  } catch (error) {
+    console.error("Error verifying Razorpay payment:", error.response?.data || error.message);
+    return res.status(500).json({
+      message: "Failed to verify Razorpay payment",
+      error: error.response?.data || error.message,
+    });
+  }
+};
+
+export const verifyPaymentControllerPhonepe = async (req, res) => {
   try {
     const { transactionId } = req.body;
 
