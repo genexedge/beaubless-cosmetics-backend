@@ -6,7 +6,7 @@ import Product from "../models/productModel.js";
 import userModel from "../models/userModel.js";
 import cartModel from "../models/cartModel.js";
 import mongoose from "mongoose";
-import { sendOrderStatusEmail,sendOrderPlacedMail,sendOrderPlacedMailAdmin } from "../controllers/emailController.js";
+import { sendOrderStatusEmail,sendOrderPlacedMail,sendOrderPlacedMailAdmin,sendOrderCancelledMail,sendOrderCancelledMailAdmin,sendOrderPendingMail,sendOrderPendingMailAdmin } from "../controllers/emailController.js";
 import Razorpay from "razorpay";
 import {
   StandardCheckoutClient,
@@ -458,8 +458,9 @@ console.log("Stock updated successfully");
       // 📨 Send Order Confirmation Email
       await sendOrderPlacedMail(email, {
         orderId: newOrder._id,
+        orderStatus: 'Confirmed',
         customerName: `${firstName} ${lastName}`,
-        orderDate: new Date().toLocaleString(),
+        orderDate: new Date(newOrder.createdAt).toLocaleString(), // ✅ accurate order time
         shippingAddress: address,
         items: cartProducts,
         totalAmount: finalTotalPrice,
@@ -469,8 +470,9 @@ console.log("Stock updated successfully");
       });
       await sendOrderPlacedMailAdmin({
         orderId: newOrder._id,
+        orderStatus: 'Confirmed',
         customerName: `${firstName} ${lastName}`,
-        orderDate: new Date().toLocaleString(),
+        orderDate: new Date(newOrder.createdAt).toLocaleString(), // ✅ accurate order time
         shippingAddress: address,
         items: cartProducts,
         totalAmount: finalTotalPrice,
@@ -571,19 +573,13 @@ console.log("Stock updated successfully");
 export const verifyPaymentController = async (req, res) => {
   try {
     const { orderId } = req.body;
-console.log(orderId);
-
     if (!orderId) {
       return res.status(400).json({ message: "Missing order ID" });
     }
-
-    const order = await Order.findOne({ razorpayOrderId: orderId });
-    console.log(order);
-    
+    const order = await Order.findOne({ razorpayOrderId: orderId });    
     if (!order.razorpayOrderId) {
       return res.status(400).json({ message: "No Razorpay Order ID associated with this order" });
     }
-
     const response = await axios.get(
       `https://api.razorpay.com/v1/orders/${order.razorpayOrderId}/payments`,
       {
@@ -592,25 +588,19 @@ console.log(orderId);
           password: process.env.RAZORPAY_KEY_SECRET,
         },
       }
-    );
-    console.log(response.data);
-    
-
+    ); 
     // Save Razorpay payment logs to the order
     const payments = response.data.items || [];
-
     let orderStatus = "Pending"; // default
     if (payments.length > 0) {
       const status = payments[0].status; // 👈 safely access the first payment status
-    
       if (status === "captured") {
-        orderStatus = "Confirmed";
+        orderStatus = "Confirmed";        
       } else if (status === "authorized" || status === "created" || status === "pending") {
         orderStatus = "Pending";
       } else if (status === "failed" || status === "refunded" || status === "cancelled") {
         orderStatus = "Cancelled";
-      }
-    
+      }    
       order.orderStatus = orderStatus;
     }
 
@@ -619,6 +609,69 @@ console.log(orderId);
 
      
     await order.save();
+    const updatedOrder = await Order.findById(order._id);
+
+    if(updatedOrder.orderStatus == "Confirmed"){
+    // 📨 Send Order Confirmation Email
+    await sendOrderPlacedMail(updatedOrder.email, {
+      orderId: updatedOrder._id,
+      orderStatus: updatedOrder.orderStatus,
+      customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
+      orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
+      shippingAddress: updatedOrder.address,
+      items: updatedOrder.cartProducts,
+      totalAmount: updatedOrder.totalPrice,
+      paymentMethod: updatedOrder.paymentMethod,
+      shippingOption: updatedOrder.selectedShippingOption.name,
+      note: updatedOrder.note || "",
+    });
+    await sendOrderPlacedMailAdmin({
+      orderId: updatedOrder._id,
+      orderStatus: updatedOrder.orderStatus,
+      customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
+      orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
+      shippingAddress: updatedOrder.address,
+      items: updatedOrder.cartProducts,
+      totalAmount: updatedOrder.totalPrice,
+      paymentMethod: updatedOrder.paymentMethod,
+      shippingOption: updatedOrder.selectedShippingOption.name,
+      note: updatedOrder.note || "",
+    });
+
+    }else if(updatedOrder.orderStatus == "Cancelled"){
+    // 📨 Send Order Confirmation Email
+        await sendOrderCancelledMail(updatedOrder.email, {
+          orderId: updatedOrder._id,
+          orderStatus: updatedOrder.orderStatus,
+          customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
+          orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
+          shippingAddress: updatedOrder.address,
+          items: updatedOrder.cartProducts,
+          totalAmount: updatedOrder.totalPrice,
+          paymentMethod: updatedOrder.paymentMethod,
+          shippingOption: updatedOrder.selectedShippingOption.name,
+          note: updatedOrder.note || "",
+        });
+       
+
+    }
+    else if(updatedOrder.orderStatus == "Pending"){
+      // 📨 Send Order Confirmation Email
+          await sendOrderPendingMail(updatedOrder.email, {
+            orderId: updatedOrder._id,
+            orderStatus: updatedOrder.orderStatus,
+            customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
+            orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
+            shippingAddress: updatedOrder.address,
+            items: updatedOrder.cartProducts,
+            totalAmount: updatedOrder.totalPrice,
+            paymentMethod: updatedOrder.paymentMethod,
+            shippingOption: updatedOrder.selectedShippingOption.name,
+            note: updatedOrder.note || "",
+          });
+         
+  
+      }
 
     return res.status(200).json({
       message: "Payment logs fetched and saved successfully",

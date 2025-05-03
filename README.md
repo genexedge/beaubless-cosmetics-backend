@@ -62,6 +62,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v3.0.9  |Mail Template Updated | Rishabh   |
 | v3.1.0  |Verify Order Created | Rishabh   |
 | v3.1.1  |Verify Order Fixed | Rishabh   |
+| v3.1.2  |Order Status mail fixed | Rishabh   |
 =======
 
 ## Installation

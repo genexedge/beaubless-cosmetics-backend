@@ -57,6 +57,7 @@ export const sendOrderPlacedMail = async (toEmail, orderData) => {
     console.error("❌ Failed to send order email:", error.message);
   }
 };
+
 // 📦 Send Order Placed Email
 export const sendOrderPlacedMailAdmin = async (orderData) => {
   try {
@@ -76,7 +77,79 @@ export const sendOrderPlacedMailAdmin = async (orderData) => {
     console.error("❌ Failed to send order email:", error.message);
   }
 };
+export const sendOrderPendingMail = async (toEmail, orderData) => {
+  try {
+    const templatePath = path.join(__dirname, "../views/email/orderPending.ejs");
+    const template = fs.readFileSync(templatePath, "utf-8");
+    const htmlContent = ejs.render(template, { order: orderData });
 
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: toEmail,
+      subject: "🛍️ Your Order is currently Pending.",
+      html: htmlContent,
+    });
+
+    console.log("📧 Order confirmation mail sent:", info.messageId);
+  } catch (error) {
+    console.error("❌ Failed to send order email:", error.message);
+  }
+};
+export const sendOrderPendingMailAdmin = async (toEmail, orderData) => {
+  try {
+    const templatePath = path.join(__dirname, "../views/email/orderPendingInternal.ejs");
+    const template = fs.readFileSync(templatePath, "utf-8");
+    const htmlContent = ejs.render(template, { order: orderData });
+
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: 'care@beaubless.com',
+      subject: "🛍️ Order is currently Pending.!",
+      html: htmlContent,
+    });
+
+    console.log("📧 Order confirmation mail sent:", info.messageId);
+  } catch (error) {
+    console.error("❌ Failed to send order email:", error.message);
+  }
+};
+
+export const sendOrderCancelledMail = async (toEmail, orderData) => {
+  try {
+    const templatePath = path.join(__dirname, "../views/email/orderCancelled.ejs");
+    const template = fs.readFileSync(templatePath, "utf-8");
+    const htmlContent = ejs.render(template, { order: orderData });
+
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: toEmail,
+      subject: "🛍️ Your Order Has Been Cancelled!",
+      html: htmlContent,
+    });
+
+    console.log("📧 Order confirmation mail sent:", info.messageId);
+  } catch (error) {
+    console.error("❌ Failed to send order email:", error.message);
+  }
+};
+export const sendOrderCancelledMailAdmin = async (toEmail, orderData) => {
+  try {
+    const templatePath = path.join(__dirname, "../views/email/orderCancelledInternal.ejs");
+    const template = fs.readFileSync(templatePath, "utf-8");
+    const htmlContent = ejs.render(template, { order: orderData });
+
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: 'care@beaubless.com',
+      subject: "🛍️ Order Has Been Cancelled!",
+      html: htmlContent,
+    });
+
+    console.log("📧 Order confirmation mail sent:", info.messageId);
+  } catch (error) {
+    console.error("❌ Failed to send order email:", error.message);
+  }
+};
 // 🚚 Send Order Status Update Email
 export const sendOrderStatusEmail = async (toEmail, data) => {
   const { orderId, newStatus, data: order } = data;
