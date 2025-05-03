@@ -60,7 +60,8 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v3.0.7  |Razorpay Offer Added| Sunil   |
 | v3.0.8  |Mail Template Changed | Rishabh   |
 | v3.0.9  |Mail Template Updated | Rishabh   |
-| v3.1.0  |Mail Send only on COD | Rishabh   |
+| v3.1.0  |Verify Order Created | Rishabh   |
+| v3.1.1  |Verify Order Fixed | Rishabh   |
 =======
 
 ## Installation

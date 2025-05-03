@@ -63,6 +63,7 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: [
         "Pending",
+        "Confirmed",
         "Processing",
         "Shipped",
         "Delivered",
@@ -92,7 +93,6 @@ const orderSchema = new mongoose.Schema(
 
     paymentStatus: {
       type: String,
-      enum: ["Pending", "Paid", "Failed", "COD"],
       default: "Pending",
     },
     phonepeTransactionId: { type: String },

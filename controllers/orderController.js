@@ -597,34 +597,33 @@ console.log(orderId);
     
 
     // Save Razorpay payment logs to the order
-    const status = response.data.items.status;
+    const payments = response.data.items || [];
 
-    let orderStatus = "pending"; // default
-    switch (status) {
-      case "captured":
-        orderStatus = "confirmed";
-        break;
-      case "authorized":
-      case "created":
-      case "pending":
-        orderStatus = "pending";
-        break;
-      case "failed":
-      case "refunded":
-      case "cancelled":
-        orderStatus = "cancelled";
-        break;
+    let orderStatus = "Pending"; // default
+    if (payments.length > 0) {
+      const status = payments[0].status; // 👈 safely access the first payment status
+    
+      if (status === "captured") {
+        orderStatus = "Confirmed";
+      } else if (status === "authorized" || status === "created" || status === "pending") {
+        orderStatus = "Pending";
+      } else if (status === "failed" || status === "refunded" || status === "cancelled") {
+        orderStatus = "Cancelled";
+      }
+    
+      order.orderStatus = orderStatus;
     }
+
     order.paymentLog = response.data; // full Razorpay object
     order.paymentStatus = response.data.items.status;
-    order.orderStatus = orderStatus;
+
      
     await order.save();
 
     return res.status(200).json({
       message: "Payment logs fetched and saved successfully",
-      paymentStatus:response.data.items.status,
       orderStatus,
+      paymentStatus:response.data.items.status,
       paymentLogs: order.paymentLog,
     });
 
