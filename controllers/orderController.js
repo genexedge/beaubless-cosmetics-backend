@@ -459,7 +459,7 @@ console.log("Stock updated successfully");
         orderStatus: 'Confirmed',
         customerName: `${firstName} ${lastName}`,
         orderDate: new Date(newOrder.createdAt).toLocaleString(), // ✅ accurate order time
-        shippingAddress: address,
+        shippingAddress: { ...address, phone },
         items: cartProducts,
         totalAmount: finalTotalPrice,
         paymentMethod: paymentMethod,
@@ -471,7 +471,7 @@ console.log("Stock updated successfully");
         orderStatus: 'Confirmed',
         customerName: `${firstName} ${lastName}`,
         orderDate: new Date(newOrder.createdAt).toLocaleString(), // ✅ accurate order time
-        shippingAddress: address,
+        shippingAddress: { ...address, phone },
         items: cartProducts,
         totalAmount: finalTotalPrice,
         paymentMethod: paymentMethod,
