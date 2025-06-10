@@ -616,7 +616,7 @@ export const verifyPaymentController = async (req, res) => {
       orderStatus: updatedOrder.orderStatus,
       customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
       orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-      shippingAddress: updatedOrder.address,
+      shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
       items: updatedOrder.cartProducts,
       totalAmount: updatedOrder.totalPrice,
       paymentMethod: updatedOrder.paymentMethod,
@@ -628,7 +628,7 @@ export const verifyPaymentController = async (req, res) => {
       orderStatus: updatedOrder.orderStatus,
       customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
       orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-      shippingAddress: updatedOrder.address,
+      shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
       items: updatedOrder.cartProducts,
       totalAmount: updatedOrder.totalPrice,
       paymentMethod: updatedOrder.paymentMethod,
@@ -643,7 +643,7 @@ export const verifyPaymentController = async (req, res) => {
           orderStatus: updatedOrder.orderStatus,
           customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
           orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-          shippingAddress: updatedOrder.address,
+          shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
           items: updatedOrder.cartProducts,
           totalAmount: updatedOrder.totalPrice,
           paymentMethod: updatedOrder.paymentMethod,
@@ -660,7 +660,7 @@ export const verifyPaymentController = async (req, res) => {
             orderStatus: updatedOrder.orderStatus,
             customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
             orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-            shippingAddress: updatedOrder.address,
+            shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
             items: updatedOrder.cartProducts,
             totalAmount: updatedOrder.totalPrice,
             paymentMethod: updatedOrder.paymentMethod,
