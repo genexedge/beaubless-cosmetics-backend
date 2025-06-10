@@ -67,6 +67,7 @@ This project is an **E-Commerce Store API** built using **Nodejs**
 | v3.1.4  |Change Order Details Verify Controller order_id| Sunil   |
 | v3.1.5  |Added Phone Numeber in Shipping Address| Sunil   |
 | v3.1.6  |Added Phone Numeber in Shipping Address| Sunil   |
+| v3.1.7  |Order Status Update | Sunil   |
 =======
 
 ## Installation
