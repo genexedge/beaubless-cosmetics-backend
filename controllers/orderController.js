@@ -570,7 +570,7 @@ console.log("Stock updated successfully");
 
 export const verifyPaymentController = async (req, res) => {
   try {
-    const { orderId } = req.body;
+    const { order_id:orderId } = req.body;
     if (!orderId) {
       return res.status(400).json({ message: "Missing order ID" });
     }
