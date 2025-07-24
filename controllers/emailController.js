@@ -201,7 +201,7 @@ export const sendContactQueryAdmin = async (orderData) => {
 
     const info = await transporter.sendMail({
       from: FROM_EMAIL,
-      to: 'care@beaubless.com',
+      to: 'Sadhna@beaubless.com',
       subject: "🛍️ New Enquiry!",
       html: htmlContent,
     });
