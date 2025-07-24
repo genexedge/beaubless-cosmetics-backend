@@ -459,7 +459,7 @@ console.log("Stock updated successfully");
         orderStatus: 'Confirmed',
         customerName: `${firstName} ${lastName}`,
         orderDate: new Date(newOrder.createdAt).toLocaleString(), // ✅ accurate order time
-        shippingAddress: address,
+        shippingAddress: { ...address, phone },
         items: cartProducts,
         totalAmount: finalTotalPrice,
         paymentMethod: paymentMethod,
@@ -471,7 +471,7 @@ console.log("Stock updated successfully");
         orderStatus: 'Confirmed',
         customerName: `${firstName} ${lastName}`,
         orderDate: new Date(newOrder.createdAt).toLocaleString(), // ✅ accurate order time
-        shippingAddress: address,
+        shippingAddress: { ...address, phone },
         items: cartProducts,
         totalAmount: finalTotalPrice,
         paymentMethod: paymentMethod,
@@ -570,7 +570,7 @@ console.log("Stock updated successfully");
 
 export const verifyPaymentController = async (req, res) => {
   try {
-    const { orderId } = req.body;
+    const { order_id:orderId } = req.body;
     if (!orderId) {
       return res.status(400).json({ message: "Missing order ID" });
     }
@@ -587,26 +587,41 @@ export const verifyPaymentController = async (req, res) => {
         },
       }
     ); 
-    // Save Razorpay payment logs to the order
-    const payments = response.data.items || [];
-    let orderStatus = "Pending"; // default
-    if (payments.length > 0) {
-      const status = payments[0].status; // 👈 safely access the first payment status
-      if (status === "captured") {
-        orderStatus = "Confirmed";        
-      } else if (status === "authorized" || status === "created" || status === "pending") {
-        orderStatus = "Pending";
-      } else if (status === "failed" || status === "refunded" || status === "cancelled") {
-        orderStatus = "Cancelled";
-      }    
-      order.orderStatus = orderStatus;
-    }
+// Save Razorpay payment logs to the order
+const payments = response.data.items || [];
+let orderStatus = "Pending"; // default
 
-    order.paymentLog = response.data; // full Razorpay object
-    order.paymentStatus = response.data.items.status;
+if (payments.length > 0) {
+  const status = payments[0].status; // 👈 safely access the first payment status
 
-     
-    await order.save();
+  if (status === "captured") {
+    orderStatus = "Confirmed";
+  } else if (status === "authorized" || status === "created" || status === "pending") {
+    orderStatus = "Pending";
+  } else if (status === "failed" || status === "refunded" || status === "cancelled") {
+    orderStatus = "Cancelled";
+  }
+
+  order.orderStatus = orderStatus;
+
+  // Ensure statusHistory is initialized
+  if (!Array.isArray(order.statusHistory)) {
+    order.statusHistory = [];
+  }
+
+  // ✅ Push new status entry
+  order.statusHistory.push({
+    status: orderStatus,
+    updatedAt: new Date()
+  });
+}
+
+// Save additional payment info
+order.paymentLog = response.data; // full Razorpay object
+order.paymentStatus = payments[0]?.status || null;
+
+await order.save();
+
     const updatedOrder = await Order.findById(order._id);
 
     if(updatedOrder.orderStatus == "Confirmed"){
@@ -616,7 +631,7 @@ export const verifyPaymentController = async (req, res) => {
       orderStatus: updatedOrder.orderStatus,
       customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
       orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-      shippingAddress: updatedOrder.address,
+      shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
       items: updatedOrder.cartProducts,
       totalAmount: updatedOrder.totalPrice,
       paymentMethod: updatedOrder.paymentMethod,
@@ -628,7 +643,7 @@ export const verifyPaymentController = async (req, res) => {
       orderStatus: updatedOrder.orderStatus,
       customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
       orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-      shippingAddress: updatedOrder.address,
+      shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
       items: updatedOrder.cartProducts,
       totalAmount: updatedOrder.totalPrice,
       paymentMethod: updatedOrder.paymentMethod,
@@ -643,7 +658,7 @@ export const verifyPaymentController = async (req, res) => {
           orderStatus: updatedOrder.orderStatus,
           customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
           orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-          shippingAddress: updatedOrder.address,
+          shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
           items: updatedOrder.cartProducts,
           totalAmount: updatedOrder.totalPrice,
           paymentMethod: updatedOrder.paymentMethod,
@@ -660,7 +675,7 @@ export const verifyPaymentController = async (req, res) => {
             orderStatus: updatedOrder.orderStatus,
             customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
             orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-            shippingAddress: updatedOrder.address,
+            shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
             items: updatedOrder.cartProducts,
             totalAmount: updatedOrder.totalPrice,
             paymentMethod: updatedOrder.paymentMethod,
@@ -767,6 +782,7 @@ export const updateOrderStatus = async (req, res) => {
       "Completed",
       "Cancelled",
     ];
+
     if (!validStatuses.includes(newStatus)) {
       return res
         .status(400)
@@ -781,9 +797,20 @@ export const updateOrderStatus = async (req, res) => {
         .json({ success: false, message: "Order not found!" });
     }
 
-    // ✅ If the current status is "Cancelled", regain inventory before update
+    // ✅ Avoid duplicate status logging
+    const lastStatus = order.statusHistory?.[order.statusHistory.length - 1]?.status;
+
+    if (lastStatus === newStatus) {
+      return res.status(200).json({
+        success: true,
+        message: `Order is already marked as "${newStatus}"`,
+        order,
+      });
+    }
+
+    // ✅ If the previous status was "Cancelled", restore stock
     if (order.orderStatus === "Cancelled") {
-      let cartProducts = order.cartProducts;
+      const cartProducts = order.cartProducts;
       let insufficientStock = null;
 
       for (let item of cartProducts) {
@@ -802,11 +829,9 @@ export const updateOrderStatus = async (req, res) => {
             break;
           }
 
-          const currentStock = product.variants[variantIndex].inventory || 0;
-          product.variants[variantIndex].inventory = currentStock + orderQty;
+          product.variants[variantIndex].inventory += orderQty;
         } else {
-          const currentStock = product.stock || 0;
-          product.stock = currentStock + orderQty;
+          product.stock += orderQty;
         }
 
         await product.save();
@@ -819,13 +844,18 @@ export const updateOrderStatus = async (req, res) => {
       console.log("🟢 Inventory regained successfully");
     }
 
-    // ✅ Update status
+    // ✅ Update orderStatus
     order.orderStatus = newStatus;
-    order.statusHistory.push({ status: newStatus, updatedAt: new Date() });
+
+    // ✅ Push status to history only if changed
+    order.statusHistory.push({
+      status: newStatus,
+      updatedAt: new Date(),
+    });
 
     await order.save();
 
-    // ✅ Send email
+    // ✅ Send status update email
     await sendOrderStatusEmail(order.email, {
       email: order.email,
       data: order,
@@ -841,6 +871,7 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 
 
