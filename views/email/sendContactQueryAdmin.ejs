@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>New Enquiry Received</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f5f1ff;
+      font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+      color: #3d3d3d;
+    }
+    .email-wrapper {
+      max-width: 640px;
+      margin: auto;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0,0,0,0.05);
+    }
+    .email-header {
+      background: linear-gradient(to right, #d1bff1, #b8b3ed);
+      padding: 40px 30px;
+      text-align: center;
+      color: #fff;
+    }
+    .email-header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .email-header p {
+      font-size: 15px;
+      margin-top: 8px;
+    }
+    .section {
+      padding: 30px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .section-title {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #7e64d3;
+    }
+    .info-row p {
+      margin: 6px 0;
+      font-size: 15px;
+    }
+    .footer {
+      background-color: #f2effa;
+      padding: 20px 30px;
+      text-align: center;
+      font-size: 13px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-header">
+      <h1>📩 New Contact Form Submission</h1>
+      <p>A new enquiry has been received on the website.</p>
+    </div>
+
+    <div class="section">
+      <div class="section-title">👤 User Details</div>
+      <div class="info-row">
+        <p><strong>Name:</strong> <%= order.name %></p>
+        <p><strong>Email:</strong> <%= order.email %></p>
+        <p><strong>Message:</strong> <%= order.message %></p>
+      </div>
+    </div>
+
+    <div class="footer">
+      This is an automated notification from <strong>Beaubless.com</strong><br/>
+      Please respond to the user as soon as possible.
+    </div>
+  </div>
+</body>
+</html>

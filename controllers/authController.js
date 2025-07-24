@@ -195,6 +195,7 @@ export const forgotPasswordController = async (req, res) => {
 
     // Password Reset Link
     const resetLink = `https://yourfrontend.com/reset-password/${resetToken}`;
+console.log("Reset Link:", resetLink); // Log the reset link for debugging
 
     // Send Email
     const mailOptions = {
@@ -205,7 +206,17 @@ export const forgotPasswordController = async (req, res) => {
              <a href="${resetLink}">${resetLink}</a>
              <p>If you did not request this, please ignore this email.</p>`,
     };
-
+const transporter = nodemailer.createTransport({
+  host: 'smtp.zoho.in',
+  port: 465,
+  secure: true,
+  auth: {
+      user: 'care@beaubless.com',
+      pass: 'Beaubless@2025'
+  },
+  logger:false,
+  debug: false
+});
     await transporter.sendMail(mailOptions);
 
     res.status(200).send({

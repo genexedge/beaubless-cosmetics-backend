@@ -193,3 +193,39 @@ export const sendRegistrationEmail = async (toEmail, userData) => {
     console.error("❌ Failed to send registration email:", error.message);
   }
 };
+export const sendContactQueryAdmin = async (orderData) => {
+  try {
+    const templatePath = path.join(__dirname, "../views/email/sendContactQueryAdmin.ejs");
+    const template = fs.readFileSync(templatePath, "utf-8");
+    const htmlContent = ejs.render(template, { order: orderData });
+
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: 'care@beaubless.com',
+      subject: "🛍️ New Enquiry!",
+      html: htmlContent,
+    });
+
+    console.log("📧 New Enquiry mail sent:", info.messageId);
+  } catch (error) {
+    console.error("❌ Failed to send New Enquiry email:", error.message);
+  }
+};
+export const sendContactQueryClient = async (orderData) => {
+  try {
+    const templatePath = path.join(__dirname, "../views/email/sendContactQueryClient.ejs");
+    const template = fs.readFileSync(templatePath, "utf-8");
+    const htmlContent = ejs.render(template, { order: orderData });
+
+    const info = await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: orderData.email,
+      subject: "🛍️ New Enquiry!",
+      html: htmlContent,
+    });
+
+    console.log("📧 New Enquiry mail sent:", info.messageId);
+  } catch (error) {
+    console.error("❌ Failed to send New Enquiry email:", error.message);
+  }
+};

@@ -1,4 +1,5 @@
 import Contact from "../models/contactModel.js";
+import { sendContactQueryClient,sendContactQueryAdmin } from "../controllers/emailController.js";
 
 export const createContactController = async (req, res) => {
   try {
@@ -12,8 +13,13 @@ export const createContactController = async (req, res) => {
 
     const newContact = new Contact({ name, email, message });
     await newContact.save();
-
-    res.status(200).json({
+    
+    await Promise.all([
+          sendContactQueryAdmin({ name, email, message }),
+          sendContactQueryClient({ name, email, message }),
+        ]);
+    
+      res.status(200).json({
       success: true,
       message: "Message received successfully",
       contact: newContact,
