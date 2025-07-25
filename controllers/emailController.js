@@ -1,4 +1,5 @@
-import nodemailer from "nodemailer";
+// 📦 Required dependencies
+import axios from "axios";
 import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
@@ -12,220 +13,97 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config();
 
-// Central FROM email format
-const FROM_EMAIL = `"${process.env.BRAND_NAME || "Your Brand"}" <${process.env.ZOHO_EMAIL}>`;
+// Constants
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const FROM_EMAIL = process.env.ZOHO_EMAIL;
+const FROM_NAME = process.env.BRAND_NAME || "Your Brand";
+const ADMIN_EMAIL = 'orders@beaubless.com';
 
-// 🔧 Create Zoho SMTP transporter
-const transporter = nodemailer.createTransport({
-  host: 'smtp.zoho.in',
-  port: 465,
-  secure: true,
-  auth: {
-      user: 'care@beaubless.com',
-      pass: 'RhpWfAQZ2vfr'
-  },
-  logger:false,
-  debug: false
-});
-
-// ✅ Check SMTP connection once at server start
-export async function verifySMTPConnection() {
+async function sendEmail({ toEmail, subject, htmlContent, name = "Customer" }) {
   try {
-    await transporter.verify();
-    console.log("✅ SMTP Connected Successfully!");
+    const payload = {
+      sender: { name: FROM_NAME, email: FROM_EMAIL },
+      to: [{ email: toEmail, name }],
+      subject,
+      htmlContent
+    };
+
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      payload,
+      {
+        headers: {
+          "api-key": BREVO_API_KEY,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        }
+      }
+    );
+
+    console.log("📧 Email sent:", response.data.messageId || "Success");
   } catch (error) {
-    console.warn("⚠️ SMTP Warning: Connection issue detected.", error.message);
+    console.error("❌ Email error:", error.response?.data || error.message);
   }
 }
 
-// 📦 Send Order Placed Email
+// Utility function
+function renderTemplate(templateFile, data) {
+  const templatePath = path.join(__dirname, `../views/email/${templateFile}`);
+  const template = fs.readFileSync(templatePath, "utf-8");
+  return ejs.render(template, data);
+}
+
+// Email Senders
 export const sendOrderPlacedMail = async (toEmail, orderData) => {
-  try {
-    const templatePath = path.join(__dirname, "../views/email/orderPlaced.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, { order: orderData });
-
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: toEmail,
-      subject: "🛍️ Your Order Has Been Placed!",
-      html: htmlContent,
-    });
-
-    console.log("📧 Order confirmation mail sent:", info.messageId);
-  } catch (error) {
-    console.error("❌ Failed to send order email:", error.message);
-  }
+  const html = renderTemplate("orderPlaced.ejs", { order: orderData });
+  await sendEmail({ toEmail, subject: "🛍️ Your Order Has Been Placed!", htmlContent: html, name: orderData.customerName });
 };
 
-// 📦 Send Order Placed Email
 export const sendOrderPlacedMailAdmin = async (orderData) => {
-  try {
-    const templatePath = path.join(__dirname, "../views/email/orderPlacedinternal.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, { order: orderData });
-
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: 'care@beaubless.com',
-      subject: "🛍️ New Order Received!",
-      html: htmlContent,
-    });
-
-    console.log("📧 Order confirmation mail sent:", info.messageId);
-  } catch (error) {
-    console.error("❌ Failed to send order email:", error.message);
-  }
+  const html = renderTemplate("orderPlacedinternal.ejs", { order: orderData });
+  await sendEmail({ toEmail: ADMIN_EMAIL, subject: "🛍️ New Order Received!", htmlContent: html });
 };
+
 export const sendOrderPendingMail = async (toEmail, orderData) => {
-  try {
-    const templatePath = path.join(__dirname, "../views/email/orderPending.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, { order: orderData });
-
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: toEmail,
-      subject: "🛍️ Your Order is currently Pending.",
-      html: htmlContent,
-    });
-
-    console.log("📧 Order confirmation mail sent:", info.messageId);
-  } catch (error) {
-    console.error("❌ Failed to send order email:", error.message);
-  }
+  const html = renderTemplate("orderPending.ejs", { order: orderData });
+  await sendEmail({ toEmail, subject: "🛍️ Your Order is currently Pending.", htmlContent: html, name: orderData.customerName });
 };
-export const sendOrderPendingMailAdmin = async (toEmail, orderData) => {
-  try {
-    const templatePath = path.join(__dirname, "../views/email/orderPendingInternal.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, { order: orderData });
 
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: 'care@beaubless.com',
-      subject: "🛍️ Order is currently Pending.!",
-      html: htmlContent,
-    });
-
-    console.log("📧 Order confirmation mail sent:", info.messageId);
-  } catch (error) {
-    console.error("❌ Failed to send order email:", error.message);
-  }
+export const sendOrderPendingMailAdmin = async (orderData) => {
+  const html = renderTemplate("orderPendingInternal.ejs", { order: orderData });
+  await sendEmail({ toEmail: ADMIN_EMAIL, subject: "🛍️ Order is currently Pending.!", htmlContent: html });
 };
 
 export const sendOrderCancelledMail = async (toEmail, orderData) => {
-  try {
-    const templatePath = path.join(__dirname, "../views/email/orderCancelled.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, { order: orderData });
-
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: toEmail,
-      subject: "🛍️ Your Order Has Been Cancelled!",
-      html: htmlContent,
-    });
-
-    console.log("📧 Order confirmation mail sent:", info.messageId);
-  } catch (error) {
-    console.error("❌ Failed to send order email:", error.message);
-  }
+  const html = renderTemplate("orderCancelled.ejs", { order: orderData });
+  await sendEmail({ toEmail, subject: "🛍️ Your Order Has Been Cancelled!", htmlContent: html, name: orderData.customerName });
 };
-export const sendOrderCancelledMailAdmin = async (toEmail, orderData) => {
-  try {
-    const templatePath = path.join(__dirname, "../views/email/orderCancelledInternal.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, { order: orderData });
 
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: 'care@beaubless.com',
-      subject: "🛍️ Order Has Been Cancelled!",
-      html: htmlContent,
-    });
-
-    console.log("📧 Order confirmation mail sent:", info.messageId);
-  } catch (error) {
-    console.error("❌ Failed to send order email:", error.message);
-  }
+export const sendOrderCancelledMailAdmin = async (orderData) => {
+  const html = renderTemplate("orderCancelledInternal.ejs", { order: orderData });
+  await sendEmail({ toEmail: ADMIN_EMAIL, subject: "🛍️ Order Has Been Cancelled!", htmlContent: html });
 };
-// 🚚 Send Order Status Update Email
+
 export const sendOrderStatusEmail = async (toEmail, data) => {
   const { orderId, newStatus, data: order } = data;
-
-  try {
-    const templatePath = path.join(__dirname, "../views/email/orderStatus.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, { orderId, newStatus, data: order });
-
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: toEmail,
-      subject: `📦 Order #${orderId} - Status Update`,
-      html: htmlContent,
-    });
-
-    console.log(`✅ Order status update mail sent to ${toEmail}`);
-  } catch (error) {
-    console.error("❌ Error sending order status email:", error.message);
-  }
+  const html = renderTemplate("orderStatus.ejs", { orderId, newStatus, data: order });
+  await sendEmail({ toEmail, subject: `📦 Order #${orderId} - Status Update`, htmlContent: html });
 };
 
 export const sendRegistrationEmail = async (toEmail, userData) => {
-  try {
-    const templatePath = path.join(__dirname, "../views/email/registration.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, {
-      user: userData,
-      brand: process.env.BRAND_NAME || "Your Company"
-    });
-
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: toEmail,
-      subject: "🎉 Welcome to Our Beaubless Platform!",
-      html: htmlContent,
-    });
-
-    console.log("📧 Registration email sent:", info.messageId);
-  } catch (error) {
-    console.error("❌ Failed to send registration email:", error.message);
-  }
+  const html = renderTemplate("registration.ejs", {
+    user: userData,
+    brand: process.env.BRAND_NAME || "Your Company"
+  });
+  await sendEmail({ toEmail, subject: "🎉 Welcome to Our Beaubless Platform!", htmlContent: html, name: userData.name });
 };
+
 export const sendContactQueryAdmin = async (orderData) => {
-  try {
-    const templatePath = path.join(__dirname, "../views/email/sendContactQueryAdmin.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, { order: orderData });
-
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: 'Sadhna@beaubless.com',
-      subject: "🛍️ New Enquiry!",
-      html: htmlContent,
-    });
-
-    console.log("📧 New Enquiry mail sent:", info.messageId);
-  } catch (error) {
-    console.error("❌ Failed to send New Enquiry email:", error.message);
-  }
+  const html = renderTemplate("sendContactQueryAdmin.ejs", { order: orderData });
+  await sendEmail({ toEmail: "Sadhna@beaubless.com", subject: "🛍️ New Enquiry!", htmlContent: html });
 };
+
 export const sendContactQueryClient = async (orderData) => {
-  try {
-    const templatePath = path.join(__dirname, "../views/email/sendContactQueryClient.ejs");
-    const template = fs.readFileSync(templatePath, "utf-8");
-    const htmlContent = ejs.render(template, { order: orderData });
-
-    const info = await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: orderData.email,
-      subject: "🛍️ New Enquiry!",
-      html: htmlContent,
-    });
-
-    console.log("📧 New Enquiry mail sent:", info.messageId);
-  } catch (error) {
-    console.error("❌ Failed to send New Enquiry email:", error.message);
-  }
+  const html = renderTemplate("sendContactQueryClient.ejs", { order: orderData });
+  await sendEmail({ toEmail: orderData.email, subject: "🛍️ New Enquiry!", htmlContent: html, name: orderData.name });
 };
