@@ -14,7 +14,7 @@ import {
   loginController,
   registerController,
   testController,
-  updateProfileController,
+  updateProfileController,resetPasswordController,updatePasswordController ,
   addAddress, updateAddress, deleteAddress, setDefaultAddress,deleteUserController
 } from "../controllers/authController.js";
 import { isAdmin, requireSignIn } from "../middlewares/authMiddleware.js";
@@ -33,7 +33,7 @@ router.post("/login", loginController);
 
 //Forgot Password || POST
 router.post("/forgot-password", forgotPasswordController);
-
+router.post('/reset-password/:token', resetPasswordController);
 //test
 router.get("/test", requireSignIn, isAdmin, testController);
 
@@ -87,5 +87,6 @@ router.get("/email/view-order", async (req, res) => {
 render('')
 
 });
+router.post('/update-password', updatePasswordController);
 
 export default router;

@@ -4,7 +4,7 @@ import JWT from "jsonwebtoken";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { sendRegistrationEmail } from "../controllers/emailController.js";
-
+import bcrypt from 'bcrypt';
 
 export const registerController = async (req, res) => {
   try {
@@ -194,7 +194,7 @@ export const forgotPasswordController = async (req, res) => {
     await user.save();
 
     // Password Reset Link
-    const resetLink = `https://yourfrontend.com/reset-password/${resetToken}`;
+    const resetLink = `https://www.dashboard.beaubless.com/reset-password/${resetToken}`;
 console.log("Reset Link:", resetLink); // Log the reset link for debugging
 
     // Send Email
@@ -232,7 +232,49 @@ const transporter = nodemailer.createTransport({
     });
   }
 };
+export const resetPasswordController = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
 
+    if (!token || !newPassword) {
+      return res.status(400).send({ message: "Token and new password are required" });
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }, // Ensure token hasn't expired
+    });
+
+    if (!user) {
+      return res.status(400).send({
+        success: false,
+        message: "Invalid or expired token",
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).send({
+      success: true,
+      message: "Password has been reset successfully",
+    });
+  } catch (error) {
+    console.error("Reset Password Error:", error);
+    res.status(500).send({
+      success: false,
+      message: "Something went wrong",
+      error,
+    });
+  }
+};
 //update profile
 export const updateProfileController = async (req, res) => {
   try {
@@ -287,7 +329,49 @@ export const updateProfileController = async (req, res) => {
     });
   }
 };
+export const updatePasswordController = async (req, res) => {
+  try {
+    const { email, password, confirmPassword } = req.body;
 
+    if (!email || !password || !confirmPassword) {
+      return res.status(400).send({
+        success: false,
+        message: "Email, password, and confirm password are required",
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).send({
+        success: false,
+        message: "Passwords do not match",
+      });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).send({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (error) {
+    console.error("Update Password Error:", error);
+    res.status(500).send({
+      success: false,
+      message: "Something went wrong",
+      error,
+    });
+  }
+};
 
 
 

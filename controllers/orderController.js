@@ -448,58 +448,48 @@ console.log("Stock updated successfully");
 
     
     if (paymentMethod === "COD") {
-      newOrder.paymentStatus = "Pending";
-      await newOrder.save();
-      if (userId) {
-        await cartModel.deleteOne({ userId });
-      }
-      // 📨 Send Order Confirmation Email
-      await sendOrderPlacedMail(email, {
-        orderId: newOrder._id,
-        orderStatus: 'Confirmed',
-        customerName: `${firstName} ${lastName}`,
-        orderDate: new Date(newOrder.createdAt).toLocaleString(), // ✅ accurate order time
-        shippingAddress: { ...address, phone },
-        items: cartProducts,
-        totalAmount: finalTotalPrice,
-        paymentMethod: paymentMethod,
-        shippingOption: selectedShippingOption,
-        note: note || "",
-      });
-      await sendOrderPlacedMailAdmin({
-        orderId: newOrder._id,
-        orderStatus: 'Confirmed',
-        customerName: `${firstName} ${lastName}`,
-        orderDate: new Date(newOrder.createdAt).toLocaleString(), // ✅ accurate order time
-        shippingAddress: { ...address, phone },
-        items: cartProducts,
-        totalAmount: finalTotalPrice,
-        paymentMethod: paymentMethod,
-        shippingOption: selectedShippingOption,
-        note: note || "",
-      });
-      return res
-        .status(201)
-        .json({ success: true, message: "Order placed successfully" });
-    } else if (paymentMethod === "PhonePe") {
-      // Call the function to initiate PhonePe payment
-      const paymentResponse = await initiatePhonePePayment(finalOrderTotal, email);
+  newOrder.paymentStatus = "Pending";
+  await newOrder.save();
 
-      if (paymentResponse.success) {
-        newOrder.phonepeTransactionId = paymentResponse.merchantTransactionId;
-        newOrder.paymentStatus = "Pending";
-        await newOrder.save();
-        await cartModel.deleteOne({ email });
+  if (userId) {
+    await cartModel.deleteOne({ userId });
+  }
 
-        return res.status(201).json({
-          success: true,
-          message: "Order created successfully, redirecting to payment.",
-          paymentUrl: paymentResponse.paymentUrl,
-        });
-      } else {
-        return res.status(400).json(paymentResponse);
-      }
-    } else if (paymentMethod === "Razorpay") {
+  // ✅ Send mail in background (do not await)
+  console.log("📧 Sending customer mail...");
+  sendOrderPlacedMail(email, {
+    orderId: newOrder._id,
+    orderStatus: "Confirmed",
+    customerName: `${firstName} ${lastName}`,
+    orderDate: new Date(newOrder.createdAt).toLocaleString(),
+    shippingAddress: { ...address, phone },
+    items: cartProducts,
+    totalAmount: finalOrderTotal,
+    paymentMethod: paymentMethod,
+    shippingOption: selectedShippingOption,
+    note: note || "",
+  }).catch(console.error);
+
+  console.log("📧 Sending admin mail...");
+  sendOrderPlacedMailAdmin({
+    orderId: newOrder._id,
+    orderStatus: "Confirmed",
+    customerName: `${firstName} ${lastName}`,
+    orderDate: new Date(newOrder.createdAt).toLocaleString(),
+    shippingAddress: { ...address, phone },
+    items: cartProducts,
+    totalAmount: finalOrderTotal,
+    paymentMethod: paymentMethod,
+    shippingOption: selectedShippingOption,
+    note: note || "",
+  }).catch(console.error);
+
+  // ✅ Now respond to client
+  return res
+    .status(201)
+    .json({ success: true, message: "Order placed successfully" });
+}
+else if (paymentMethod === "Razorpay") {
     try {
       // Call the function to initiate Razorpay payment
       const paymentResponse = await initiateRazorpayPayment(finalOrderTotal, email);
@@ -532,31 +522,7 @@ console.log("Stock updated successfully");
         message: "Internal server error during Razorpay payment initiation.",
       });
     }
-  } else if (paymentMethod === "CCAvenue") {
-      const ccavenueData = await initiateCcAvenuePayment({
-        amount: finalOrderTotal,
-        name: `${firstName} ${lastName}`,
-        email,
-        phone,
-      });
-    
-      if (ccavenueData.success) {
-        newOrder.paymentStatus = "Pending";
-        newOrder.ccavenueOrderId = ccavenueData.order_id;
-        await newOrder.save();
-        await cartModel.deleteOne({ email });
-    
-        return res.status(201).json({
-          success: true,
-          message: "Redirecting to CCAvenue",
-          encRequest: ccavenueData.encRequest,
-          access_code: ccavenueData.access_code,
-          ccavenue: true,
-        });
-      } else {
-        return res.status(500).json({ success: false, message: ccavenueData.message });
-      }
-    }
+  } 
     
   } catch (error) {
     console.error("Error placing order:", error);
@@ -570,14 +536,17 @@ console.log("Stock updated successfully");
 
 export const verifyPaymentController = async (req, res) => {
   try {
-    const { order_id:orderId } = req.body;
+    const { order_id: orderId } = req.body;
     if (!orderId) {
       return res.status(400).json({ message: "Missing order ID" });
     }
-    const order = await Order.findOne({ razorpayOrderId: orderId });    
-    if (!order.razorpayOrderId) {
+
+    const order = await Order.findOne({ razorpayOrderId: orderId });
+
+    if (!order?.razorpayOrderId) {
       return res.status(400).json({ message: "No Razorpay Order ID associated with this order" });
     }
+
     const response = await axios.get(
       `https://api.razorpay.com/v1/orders/${order.razorpayOrderId}/payments`,
       {
@@ -586,110 +555,71 @@ export const verifyPaymentController = async (req, res) => {
           password: process.env.RAZORPAY_KEY_SECRET,
         },
       }
-    ); 
-// Save Razorpay payment logs to the order
-const payments = response.data.items || [];
-let orderStatus = "Pending"; // default
+    );
 
-if (payments.length > 0) {
-  const status = payments[0].status; // 👈 safely access the first payment status
+    // Save Razorpay payment logs to the order
+    const payments = response.data.items || [];
+    let orderStatus = "Pending"; // default
 
-  if (status === "captured") {
-    orderStatus = "Confirmed";
-  } else if (status === "authorized" || status === "created" || status === "pending") {
-    orderStatus = "Pending";
-  } else if (status === "failed" || status === "refunded" || status === "cancelled") {
-    orderStatus = "Cancelled";
-  }
+    if (payments.length > 0) {
+      const status = payments[0].status;
 
-  order.orderStatus = orderStatus;
+      if (status === "captured") {
+        orderStatus = "Confirmed";
+      } else if (["authorized", "created", "pending"].includes(status)) {
+        orderStatus = "Pending";
+      } else if (["failed", "refunded", "cancelled"].includes(status)) {
+        orderStatus = "Cancelled";
+      }
 
-  // Ensure statusHistory is initialized
-  if (!Array.isArray(order.statusHistory)) {
-    order.statusHistory = [];
-  }
+      order.orderStatus = orderStatus;
 
-  // ✅ Push new status entry
-  order.statusHistory.push({
-    status: orderStatus,
-    updatedAt: new Date()
-  });
-}
+      if (!Array.isArray(order.statusHistory)) {
+        order.statusHistory = [];
+      }
 
-// Save additional payment info
-order.paymentLog = response.data; // full Razorpay object
-order.paymentStatus = payments[0]?.status || null;
+      order.statusHistory.push({
+        status: orderStatus,
+        updatedAt: new Date(),
+      });
+    }
 
-await order.save();
+    order.paymentLog = response.data;
+    order.paymentStatus = payments[0]?.status || null;
+
+    await order.save();
 
     const updatedOrder = await Order.findById(order._id);
 
-    if(updatedOrder.orderStatus == "Confirmed"){
-    // 📨 Send Order Confirmation Email
-    await sendOrderPlacedMail(updatedOrder.email, {
+    // 🔁 Mail content
+    const mailData = {
       orderId: updatedOrder._id,
       orderStatus: updatedOrder.orderStatus,
       customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
-      orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-      shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
+      orderDate: new Date(order.createdAt).toLocaleString(),
+      shippingAddress: { ...updatedOrder.address, phone: updatedOrder.phone },
       items: updatedOrder.cartProducts,
       totalAmount: updatedOrder.totalPrice,
       paymentMethod: updatedOrder.paymentMethod,
       shippingOption: updatedOrder.selectedShippingOption.name,
       note: updatedOrder.note || "",
-    });
-    await sendOrderPlacedMailAdmin({
-      orderId: updatedOrder._id,
-      orderStatus: updatedOrder.orderStatus,
-      customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
-      orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-      shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
-      items: updatedOrder.cartProducts,
-      totalAmount: updatedOrder.totalPrice,
-      paymentMethod: updatedOrder.paymentMethod,
-      shippingOption: updatedOrder.selectedShippingOption.name,
-      note: updatedOrder.note || "",
-    });
+    };
 
-    }else if(updatedOrder.orderStatus == "Cancelled"){
-    // 📨 Send Order Confirmation Email
-        await sendOrderCancelledMail(updatedOrder.email, {
-          orderId: updatedOrder._id,
-          orderStatus: updatedOrder.orderStatus,
-          customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
-          orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-          shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
-          items: updatedOrder.cartProducts,
-          totalAmount: updatedOrder.totalPrice,
-          paymentMethod: updatedOrder.paymentMethod,
-          shippingOption: updatedOrder.selectedShippingOption.name,
-          note: updatedOrder.note || "",
-        });
-       
-
+    // 📨 Send mail in background (non-blocking)
+    if (updatedOrder.orderStatus === "Confirmed") {
+      sendOrderPlacedMail(updatedOrder.email, mailData).catch(console.error);
+      sendOrderPlacedMailAdmin(mailData).catch(console.error);
+    } else if (updatedOrder.orderStatus === "Cancelled") {
+      sendOrderCancelledMail(updatedOrder.email, mailData).catch(console.error);
+    } else if (updatedOrder.orderStatus === "Pending") {
+      sendOrderPendingMail(updatedOrder.email, mailData).catch(console.error);
     }
-    else if(updatedOrder.orderStatus == "Pending"){
-      // 📨 Send Order Confirmation Email
-          await sendOrderPendingMail(updatedOrder.email, {
-            orderId: updatedOrder._id,
-            orderStatus: updatedOrder.orderStatus,
-            customerName: `${updatedOrder.firstName} ${updatedOrder.lastName}`,
-            orderDate: new Date(order.createdAt).toLocaleString(), // ✅ accurate order time
-            shippingAddress: {...updatedOrder.address, phone: updatedOrder.phone },
-            items: updatedOrder.cartProducts,
-            totalAmount: updatedOrder.totalPrice,
-            paymentMethod: updatedOrder.paymentMethod,
-            shippingOption: updatedOrder.selectedShippingOption.name,
-            note: updatedOrder.note || "",
-          });
-         
-  
-      }
 
+    // ✅ Respond fast
     return res.status(200).json({
       message: "Payment logs fetched and saved successfully",
       orderStatus,
-      paymentStatus:response.data.items.status,
+      paymentStatus: payments[0]?.status,
       paymentLogs: order.paymentLog,
     });
 
@@ -701,6 +631,7 @@ await order.save();
     });
   }
 };
+
 
 export const verifyPaymentControllerPhonepe = async (req, res) => {
   try {
