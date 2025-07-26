@@ -2,46 +2,34 @@ import Product from "../models/productModel.js";  // Assuming Product model incl
 import mongoose from "mongoose";
 import User from "../models/userModel.js";
 import Order from "../models/orderModel.js";
-// ✅ 1️⃣ Create a new review
+// ✅ 1️⃣ Create a new review                                                                                                        
+ 
 
 export const createReview = async (req, res) => {
   try {
-    const { product, uid, email, rating, comment, images } = req.body;
-    
+    const { product, email, userName, rating, comment } = req.body;
 
+    // Validate product ID
     if (!mongoose.Types.ObjectId.isValid(product)) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
 
-    // Check if product exists
+    // Confirm product exists
     const productData = await Product.findById(product);
-    if (!productData) return res.status(404).json({ error: "Product not found" });
-
-    let userType = "guest";
-    let name = "Anonymous"; // Default name
-
-    // Check if email exists in the User table
-    const user = await User.findOne({ email });
-
-    if (user) {
-      userType = "member";
-      name = user.name || `${user.name}`.trim();
-    } else {
-      // If not found in User table, check if they purchased the product
-      const order = await Order.findOne({ userEmail: email, "items.product": product });
-      if (order) {
-        userType = "member";
-        name = `${order.firstName} ${order.lastName}`.trim();
-      }
+    if (!productData) {
+      return res.status(404).json({ error: "Product not found" });
     }
 
-    if (userType === "guest") {
-      return res.status(403).json({ error: "You cannot post a review for this product as you haven't purchased it." });
-    }
+    // Create review object
+    const newReview = {
+      product,
+      email,
+      name: userName,
+      rating,
+      comment,
+    };
 
-    // Ensure `userType` and `name` are included in the review object
-    const newReview = { product, uid: uid || "anonymous", email, userType, name, rating, comment, images };
-    console.log(newReview);
+    // Push to product's reviews array
     productData.reviews.push(newReview);
     await productData.save();
 
@@ -50,7 +38,8 @@ export const createReview = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-// ✅ 2️⃣ Get all reviews for a specific product
+
+// ✅ ⿢ Get all reviews for a specific product
 export const getReviewsByProduct = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -64,8 +53,8 @@ export const getReviewsByProduct = async (req, res) => {
 
     return res.status(200).json({ reviews: productData.reviews });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 // ✅ 3️⃣ Update a review (Only by the user who wrote it)

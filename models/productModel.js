@@ -4,10 +4,10 @@ import slugify from "slugify";
 const productReviewSchema = new mongoose.Schema(
   {
     product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
-    uid:{ type: String },
-    email:{ type: String,required: true },
+    uid: { type: String },
+    email: { type: String, required: true },
     name: { type: String },
-    userType:{ type: String },
+    userType: { type: String },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, required: true },
     reply: {
@@ -15,11 +15,13 @@ const productReviewSchema = new mongoose.Schema(
       repliedAt: { type: Date },
     },
     images: [{ type: String }], // Array for review images
+    profileImage: { type: String }, // ✅ Profile image URL or base64
     verifiedPurchase: { type: Boolean, default: false }, // True if user has purchased the product
     helpfulVotes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Track who found it helpful
   },
   { timestamps: true }
 );
+
 
 const productSchema = new mongoose.Schema(
   {
