@@ -28,6 +28,7 @@ const productSchema = new mongoose.Schema(
     brand: { type: String, required: true },
     shortDescription: { type: String, required: true },
     description: { type: String, required: true },
+    reasonsToLove: { type: String },
     category: { type: mongoose.Schema.Types.ObjectId, ref: "ProductCategory" },
     price: { type: Number, required: true }, // Original price
     discount: {

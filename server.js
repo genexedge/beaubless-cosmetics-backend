@@ -44,8 +44,85 @@ app.use("/api/v1/coupon", couponRoutes);
 
 // Root Route
 app.get("/", (req, res) => {
-  res.send("API is running successfully!");
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Beaubless API</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: 'Inter', sans-serif;
+                background: linear-gradient(135deg, #fef6f9, #e3f2fd);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100vh;
+                color: #2e2e2e;
+            }
+            .container {
+                background: #fff;
+                padding: 50px 40px;
+                border-radius: 16px;
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                max-width: 600px;
+                transition: transform 0.3s ease;
+            }
+            .container:hover {
+                transform: translateY(-5px);
+            }
+            h1 {
+                font-size: 2.5rem;
+                margin-bottom: 15px;
+                color: #c2185b;
+            }
+            p {
+                font-size: 1.1rem;
+                color: #555;
+                margin-bottom: 30px;
+            }
+            .status {
+                font-size: 1rem;
+                color: #388e3c;
+                font-weight: 600;
+                background: #e8f5e9;
+                padding: 10px 20px;
+                border-radius: 8px;
+                display: inline-block;
+            }
+            @media (max-width: 600px) {
+                .container {
+                    margin: 20px;
+                    padding: 30px 20px;
+                }
+                h1 {
+                    font-size: 2rem;
+                }
+                p {
+                    font-size: 1rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>✨ Beaubless API</h1>
+            <p>Welcome to the official API service of <strong>Beaubless Cosmetics</strong>. Your request was successful.</p>
+            <div class="status">✅ API is running smoothly</div>
+        </div>
+    </body>
+    </html>
+  `);
 });
+
 app.use(cors());
 // Start Server
 const PORT = process.env.PORT || 5000;
